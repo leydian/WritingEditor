@@ -49,6 +49,7 @@ let supabaseSdkPromise = null;
 let supabaseSdkError = '';
 let showWithdrawOnAuthGate = false;
 let mobileMiniSidebarOpen = false;
+let mobileMiniCalendarOpen = false;
 const dirtyDocIds = new Set();
 const layoutPrefs = loadLayoutPrefs();
 
@@ -1712,7 +1713,7 @@ function updatePanelToggleButtons() {
   const isMobileMini = window.innerWidth <= MOBILE_MINI_BREAKPOINT;
   const isCompact = window.innerWidth <= 1100;
   const showSidebar = isMobileMini ? mobileMiniSidebarOpen : !!layoutPrefs.showSidebar;
-  const showCalendar = !!layoutPrefs.showCalendar && !isCompact;
+  const showCalendar = isMobileMini ? mobileMiniCalendarOpen : (!!layoutPrefs.showCalendar && !isCompact);
 
   if (treeBtn) {
     if (isMobileMini) {
@@ -1735,7 +1736,11 @@ function updatePanelToggleButtons() {
     else sidebarToolbarBtn.textContent = showSidebar ? '문서트리 숨기기' : '문서트리 보이기';
   }
   if (calendarToolbarBtn) {
-    if (isCompact) {
+    if (isMobileMini) {
+      calendarToolbarBtn.textContent = showCalendar ? '달력 닫기' : '달력 열기';
+      calendarToolbarBtn.disabled = false;
+      calendarToolbarBtn.title = showCalendar ? '오른쪽 달력 패널 닫기' : '오른쪽 달력 패널 열기';
+    } else if (isCompact) {
       calendarToolbarBtn.textContent = '달력(넓은 화면)';
       calendarToolbarBtn.disabled = true;
       calendarToolbarBtn.title = '달력 패널은 넓은 화면에서만 표시됩니다.';
@@ -1759,7 +1764,7 @@ function applyAppLayout() {
   const isCompact = window.innerWidth <= 1100;
   const isMobileMini = window.innerWidth <= MOBILE_MINI_BREAKPOINT;
   const showSidebar = isMobileMini ? mobileMiniSidebarOpen : !!layoutPrefs.showSidebar;
-  const showCalendar = !!layoutPrefs.showCalendar && !isCompact;
+  const showCalendar = isMobileMini ? mobileMiniCalendarOpen : (!!layoutPrefs.showCalendar && !isCompact);
   const leftBarSpace = showSidebar ? 0 : 16;
   const rightBarSpace = showCalendar ? 0 : (isCompact ? 0 : 16);
 
@@ -1768,11 +1773,11 @@ function applyAppLayout() {
   resizer.classList.toggle('hidden-panel', !showSidebar);
   statsPanel.classList.toggle('hidden-panel', !showCalendar);
   if (showTreeBar) {
-    showTreeBar.classList.add('hidden');
+    showTreeBar.classList.toggle('hidden', isMobileMini || showSidebar);
     showTreeBar.setAttribute('aria-label', isMobileMini ? '문서 목록 열기' : '문서트리 보이기');
     showTreeBar.title = isMobileMini ? '문서 목록 열기' : '문서트리 보이기';
   }
-  if (showCalendarBar) showCalendarBar.classList.add('hidden');
+  if (showCalendarBar) showCalendarBar.classList.toggle('hidden', isMobileMini || showCalendar || isCompact);
 
   if (showSidebar && showCalendar) app.style.gridTemplateColumns = `${sidebarWidth}px 8px 1fr 260px`;
   else if (showSidebar && !showCalendar) app.style.gridTemplateColumns = `${sidebarWidth}px 8px 1fr`;
@@ -1834,6 +1839,11 @@ function bindEvents() {
     applyAppLayout();
   };
   if (toggleCalendarBtn) toggleCalendarBtn.onclick = () => {
+    if (window.innerWidth <= MOBILE_MINI_BREAKPOINT) {
+      mobileMiniCalendarOpen = false;
+      applyAppLayout();
+      return;
+    }
     layoutPrefs.showCalendar = !layoutPrefs.showCalendar;
     saveLayoutPrefs();
     applyAppLayout();
@@ -1841,6 +1851,7 @@ function bindEvents() {
   if (showTreeBar) showTreeBar.onclick = () => {
     if (window.innerWidth <= MOBILE_MINI_BREAKPOINT) {
       mobileMiniSidebarOpen = true;
+      mobileMiniCalendarOpen = false;
       applyAppLayout();
       return;
     }
@@ -1849,6 +1860,12 @@ function bindEvents() {
     applyAppLayout();
   };
   if (showCalendarBar) showCalendarBar.onclick = () => {
+    if (window.innerWidth <= MOBILE_MINI_BREAKPOINT) {
+      mobileMiniCalendarOpen = true;
+      mobileMiniSidebarOpen = false;
+      applyAppLayout();
+      return;
+    }
     layoutPrefs.showCalendar = true;
     saveLayoutPrefs();
     applyAppLayout();
@@ -1856,6 +1873,7 @@ function bindEvents() {
   if (sidebarToolbarBtn) sidebarToolbarBtn.onclick = () => {
     if (window.innerWidth <= MOBILE_MINI_BREAKPOINT) {
       mobileMiniSidebarOpen = !mobileMiniSidebarOpen;
+      if (mobileMiniSidebarOpen) mobileMiniCalendarOpen = false;
       applyAppLayout();
       return;
     }
@@ -1864,6 +1882,12 @@ function bindEvents() {
     applyAppLayout();
   };
   if (calendarToolbarBtn) calendarToolbarBtn.onclick = () => {
+    if (window.innerWidth <= MOBILE_MINI_BREAKPOINT) {
+      mobileMiniCalendarOpen = !mobileMiniCalendarOpen;
+      if (mobileMiniCalendarOpen) mobileMiniSidebarOpen = false;
+      applyAppLayout();
+      return;
+    }
     if (window.innerWidth <= 1100) return;
     layoutPrefs.showCalendar = !layoutPrefs.showCalendar;
     saveLayoutPrefs();
@@ -1961,11 +1985,20 @@ function bindEvents() {
   });
 
   document.addEventListener('click', (e) => {
-    if (window.innerWidth > MOBILE_MINI_BREAKPOINT || !mobileMiniSidebarOpen) return;
+    if (window.innerWidth > MOBILE_MINI_BREAKPOINT) return;
     const sidebar = $('sidebar');
+    const statsPanel = document.querySelector('.stats-panel');
     const showTreeBarBtn = $('show-tree-bar');
-    if ((sidebar && sidebar.contains(e.target)) || (showTreeBarBtn && showTreeBarBtn.contains(e.target))) return;
+    const sidebarToolbar = $('toggle-sidebar-toolbar-btn');
+    const calendarToolbar = $('toggle-calendar-toolbar-btn');
+    if (sidebar && sidebar.contains(e.target)) return;
+    if (statsPanel && statsPanel.contains(e.target)) return;
+    if (showTreeBarBtn && showTreeBarBtn.contains(e.target)) return;
+    if (sidebarToolbar && sidebarToolbar.contains(e.target)) return;
+    if (calendarToolbar && calendarToolbar.contains(e.target)) return;
+    if (!mobileMiniSidebarOpen && !mobileMiniCalendarOpen) return;
     mobileMiniSidebarOpen = false;
+    mobileMiniCalendarOpen = false;
     applyAppLayout();
   });
 }

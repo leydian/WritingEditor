@@ -460,6 +460,20 @@ textarea:focus { outline: none; }
     animation: miniDrawerIn .18s ease-out;
   }
 
+  .mobile-mini .stats-panel {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    width: min(86vw, 340px);
+    display: block !important;
+    max-height: none;
+    z-index: 46;
+    border-left: 1px solid var(--line);
+    box-shadow: -18px 0 42px rgba(2, 8, 23, .5);
+    animation: miniDrawerInRight .18s ease-out;
+  }
+
   .mobile-mini .edge-bar.left {
     position: fixed;
     left: 12px;
@@ -512,6 +526,11 @@ textarea:focus { outline: none; }
 
 @keyframes miniDrawerIn {
   from { transform: translateX(-14px); opacity: .92; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes miniDrawerInRight {
+  from { transform: translateX(14px); opacity: .92; }
   to { transform: translateX(0); opacity: 1; }
 }
 
