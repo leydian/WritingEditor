@@ -10,6 +10,7 @@ const SUPABASE_SDK_URLS = [
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js',
   'https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js',
 ];
+const MOBILE_MINI_BREAKPOINT = 900;
 const WITHDRAW_CONFIRM_TEXT = '회원탈퇴';
 const EMBEDDED_SUPABASE_URL = 'https://rvrysnatyimuilarxfft.supabase.co';
 const EMBEDDED_SUPABASE_ANON = 'sb_publishable_v_aVOb5bAPP3pr1dF7POBQ_qnxCWVho';
@@ -47,6 +48,7 @@ let hydratingRemoteState = false;
 let supabaseSdkPromise = null;
 let supabaseSdkError = '';
 let showWithdrawOnAuthGate = false;
+let mobileMiniSidebarOpen = false;
 const dirtyDocIds = new Set();
 const layoutPrefs = loadLayoutPrefs();
 
@@ -1705,10 +1707,17 @@ async function saveAuthConfigAndInit() {
 function updatePanelToggleButtons() {
   const treeBtn = $('toggle-tree-btn');
   const calendarBtn = $('toggle-calendar-btn');
+  const isMobileMini = window.innerWidth <= MOBILE_MINI_BREAKPOINT;
   if (treeBtn) {
-    treeBtn.textContent = '◀';
-    treeBtn.title = '문서트리 숨기기';
-    treeBtn.setAttribute('aria-label', '문서트리 숨기기');
+    if (isMobileMini) {
+      treeBtn.textContent = '✕';
+      treeBtn.title = '문서트리 닫기';
+      treeBtn.setAttribute('aria-label', '문서트리 닫기');
+    } else {
+      treeBtn.textContent = '◀';
+      treeBtn.title = '문서트리 숨기기';
+      treeBtn.setAttribute('aria-label', '문서트리 숨기기');
+    }
   }
   if (calendarBtn) {
     calendarBtn.textContent = '▶';
@@ -1727,15 +1736,21 @@ function applyAppLayout() {
   if (!app || !sidebar || !resizer || !statsPanel) return;
 
   const isCompact = window.innerWidth <= 1100;
-  const showSidebar = !!layoutPrefs.showSidebar;
+  const isMobileMini = window.innerWidth <= MOBILE_MINI_BREAKPOINT;
+  const showSidebar = isMobileMini ? mobileMiniSidebarOpen : !!layoutPrefs.showSidebar;
   const showCalendar = !!layoutPrefs.showCalendar && !isCompact;
   const leftBarSpace = showSidebar ? 0 : 16;
   const rightBarSpace = showCalendar ? 0 : (isCompact ? 0 : 16);
 
+  document.body.classList.toggle('mobile-mini', isMobileMini);
   sidebar.classList.toggle('hidden-panel', !showSidebar);
   resizer.classList.toggle('hidden-panel', !showSidebar);
   statsPanel.classList.toggle('hidden-panel', !showCalendar);
-  if (showTreeBar) showTreeBar.classList.toggle('hidden', showSidebar);
+  if (showTreeBar) {
+    showTreeBar.classList.toggle('hidden', showSidebar);
+    showTreeBar.setAttribute('aria-label', isMobileMini ? '문서 목록 열기' : '문서트리 보이기');
+    showTreeBar.title = isMobileMini ? '문서 목록 열기' : '문서트리 보이기';
+  }
   if (showCalendarBar) showCalendarBar.classList.toggle('hidden', showCalendar || isCompact);
 
   if (showSidebar && showCalendar) app.style.gridTemplateColumns = `${sidebarWidth}px 8px 1fr 260px`;
@@ -1786,6 +1801,11 @@ function bindEvents() {
   if (splitHorizontalBtn) splitHorizontalBtn.onclick = () => switchSplit('horizontal');
   if (splitOffBtn) splitOffBtn.onclick = () => switchSplit('single');
   if (toggleTreeBtn) toggleTreeBtn.onclick = () => {
+    if (window.innerWidth <= MOBILE_MINI_BREAKPOINT) {
+      mobileMiniSidebarOpen = false;
+      applyAppLayout();
+      return;
+    }
     layoutPrefs.showSidebar = !layoutPrefs.showSidebar;
     saveLayoutPrefs();
     applyAppLayout();
@@ -1796,6 +1816,11 @@ function bindEvents() {
     applyAppLayout();
   };
   if (showTreeBar) showTreeBar.onclick = () => {
+    if (window.innerWidth <= MOBILE_MINI_BREAKPOINT) {
+      mobileMiniSidebarOpen = true;
+      applyAppLayout();
+      return;
+    }
     layoutPrefs.showSidebar = true;
     saveLayoutPrefs();
     applyAppLayout();
@@ -1894,6 +1919,15 @@ function bindEvents() {
   document.addEventListener('keydown', (e) => {
     if (e.altKey && e.key === '\\') switchSplit('vertical');
     if (e.altKey && e.key === '-') switchSplit('horizontal');
+  });
+
+  document.addEventListener('click', (e) => {
+    if (window.innerWidth > MOBILE_MINI_BREAKPOINT || !mobileMiniSidebarOpen) return;
+    const sidebar = $('sidebar');
+    const showTreeBarBtn = $('show-tree-bar');
+    if ((sidebar && sidebar.contains(e.target)) || (showTreeBarBtn && showTreeBarBtn.contains(e.target))) return;
+    mobileMiniSidebarOpen = false;
+    applyAppLayout();
   });
 }
 
