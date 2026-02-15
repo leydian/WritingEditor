@@ -1707,7 +1707,13 @@ async function saveAuthConfigAndInit() {
 function updatePanelToggleButtons() {
   const treeBtn = $('toggle-tree-btn');
   const calendarBtn = $('toggle-calendar-btn');
+  const sidebarToolbarBtn = $('toggle-sidebar-toolbar-btn');
+  const calendarToolbarBtn = $('toggle-calendar-toolbar-btn');
   const isMobileMini = window.innerWidth <= MOBILE_MINI_BREAKPOINT;
+  const isCompact = window.innerWidth <= 1100;
+  const showSidebar = isMobileMini ? mobileMiniSidebarOpen : !!layoutPrefs.showSidebar;
+  const showCalendar = !!layoutPrefs.showCalendar && !isCompact;
+
   if (treeBtn) {
     if (isMobileMini) {
       treeBtn.textContent = '✕';
@@ -1723,6 +1729,21 @@ function updatePanelToggleButtons() {
     calendarBtn.textContent = '▶';
     calendarBtn.title = '달력 숨기기';
     calendarBtn.setAttribute('aria-label', '달력 숨기기');
+  }
+  if (sidebarToolbarBtn) {
+    if (isMobileMini) sidebarToolbarBtn.textContent = showSidebar ? '문서목록 닫기' : '문서목록 열기';
+    else sidebarToolbarBtn.textContent = showSidebar ? '문서트리 숨기기' : '문서트리 보이기';
+  }
+  if (calendarToolbarBtn) {
+    if (isCompact) {
+      calendarToolbarBtn.textContent = '달력(넓은 화면)';
+      calendarToolbarBtn.disabled = true;
+      calendarToolbarBtn.title = '달력 패널은 넓은 화면에서만 표시됩니다.';
+    } else {
+      calendarToolbarBtn.textContent = showCalendar ? '달력 숨기기' : '달력 보이기';
+      calendarToolbarBtn.disabled = false;
+      calendarToolbarBtn.title = showCalendar ? '오른쪽 달력 패널 숨기기' : '오른쪽 달력 패널 보이기';
+    }
   }
 }
 
@@ -1747,11 +1768,11 @@ function applyAppLayout() {
   resizer.classList.toggle('hidden-panel', !showSidebar);
   statsPanel.classList.toggle('hidden-panel', !showCalendar);
   if (showTreeBar) {
-    showTreeBar.classList.toggle('hidden', showSidebar);
+    showTreeBar.classList.add('hidden');
     showTreeBar.setAttribute('aria-label', isMobileMini ? '문서 목록 열기' : '문서트리 보이기');
     showTreeBar.title = isMobileMini ? '문서 목록 열기' : '문서트리 보이기';
   }
-  if (showCalendarBar) showCalendarBar.classList.toggle('hidden', showCalendar || isCompact);
+  if (showCalendarBar) showCalendarBar.classList.add('hidden');
 
   if (showSidebar && showCalendar) app.style.gridTemplateColumns = `${sidebarWidth}px 8px 1fr 260px`;
   else if (showSidebar && !showCalendar) app.style.gridTemplateColumns = `${sidebarWidth}px 8px 1fr`;
@@ -1772,6 +1793,8 @@ function bindEvents() {
   const toggleCalendarBtn = $('toggle-calendar-btn');
   const showTreeBar = $('show-tree-bar');
   const showCalendarBar = $('show-calendar-bar');
+  const sidebarToolbarBtn = $('toggle-sidebar-toolbar-btn');
+  const calendarToolbarBtn = $('toggle-calendar-toolbar-btn');
   const editorA = $('editor-a');
   const editorB = $('editor-b');
   const goalInput = $('goal-input');
@@ -1827,6 +1850,22 @@ function bindEvents() {
   };
   if (showCalendarBar) showCalendarBar.onclick = () => {
     layoutPrefs.showCalendar = true;
+    saveLayoutPrefs();
+    applyAppLayout();
+  };
+  if (sidebarToolbarBtn) sidebarToolbarBtn.onclick = () => {
+    if (window.innerWidth <= MOBILE_MINI_BREAKPOINT) {
+      mobileMiniSidebarOpen = !mobileMiniSidebarOpen;
+      applyAppLayout();
+      return;
+    }
+    layoutPrefs.showSidebar = !layoutPrefs.showSidebar;
+    saveLayoutPrefs();
+    applyAppLayout();
+  };
+  if (calendarToolbarBtn) calendarToolbarBtn.onclick = () => {
+    if (window.innerWidth <= 1100) return;
+    layoutPrefs.showCalendar = !layoutPrefs.showCalendar;
     saveLayoutPrefs();
     applyAppLayout();
   };

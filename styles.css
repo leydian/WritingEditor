@@ -139,6 +139,23 @@ body {
 .left-tools,
 .right-tools { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 
+#toggle-sidebar-toolbar-btn,
+#toggle-calendar-toolbar-btn {
+  background: #1e293b;
+  border-color: #475569;
+}
+
+#toggle-sidebar-toolbar-btn:hover,
+#toggle-calendar-toolbar-btn:hover {
+  background: #2a3a52;
+}
+
+#toggle-sidebar-toolbar-btn:disabled,
+#toggle-calendar-toolbar-btn:disabled {
+  opacity: .58;
+  cursor: not-allowed;
+}
+
 button,
 input {
   cursor: pointer;
@@ -392,6 +409,11 @@ textarea:focus { outline: none; }
   .right-tools > * {
     white-space: nowrap;
     flex: 0 0 auto;
+  }
+
+  #toggle-sidebar-toolbar-btn,
+  #toggle-calendar-toolbar-btn {
+    min-width: 112px;
   }
 
   #user-email {
