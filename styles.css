@@ -433,7 +433,14 @@ textarea:focus { outline: none; }
     display: none;
   }
 
-  #user-email,
+  #user-email {
+    display: inline-flex;
+    max-width: 56vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   #sync-status { display: none; }
 
   .editor-area.vertical { grid-template-columns: 1fr; }
