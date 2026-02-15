@@ -1769,6 +1769,7 @@ function applyAppLayout() {
   const rightBarSpace = showCalendar ? 0 : (isCompact ? 0 : 16);
 
   document.body.classList.toggle('mobile-mini', isMobileMini);
+  document.body.classList.toggle('mobile-mini-calendar-open', isMobileMini && showCalendar);
   sidebar.classList.toggle('hidden-panel', !showSidebar);
   resizer.classList.toggle('hidden-panel', !showSidebar);
   statsPanel.classList.toggle('hidden-panel', !showCalendar);

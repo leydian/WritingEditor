@@ -143,6 +143,7 @@ body {
 #toggle-calendar-toolbar-btn {
   background: #1e293b;
   border-color: #475569;
+  display: none;
 }
 
 #toggle-sidebar-toolbar-btn:hover,
@@ -414,6 +415,7 @@ textarea:focus { outline: none; }
   #toggle-sidebar-toolbar-btn,
   #toggle-calendar-toolbar-btn {
     min-width: 112px;
+    display: inline-flex;
   }
 
   #user-email {
@@ -460,7 +462,7 @@ textarea:focus { outline: none; }
     animation: miniDrawerIn .18s ease-out;
   }
 
-  .mobile-mini .stats-panel {
+  .mobile-mini.mobile-mini-calendar-open .stats-panel {
     position: fixed;
     top: 0;
     bottom: 0;
