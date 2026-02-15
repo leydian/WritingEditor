@@ -1732,14 +1732,14 @@ function updatePanelToggleButtons() {
     calendarBtn.setAttribute('aria-label', '달력 숨기기');
   }
   if (sidebarToolbarBtn) {
-    if (isMobileMini) sidebarToolbarBtn.textContent = showSidebar ? '문서목록 닫기' : '문서목록 열기';
+    if (isMobileMini) sidebarToolbarBtn.textContent = showSidebar ? '문서목록 닫기' : '문서목록';
     else sidebarToolbarBtn.textContent = showSidebar ? '문서트리 숨기기' : '문서트리 보이기';
   }
   if (calendarToolbarBtn) {
     if (isMobileMini) {
-      calendarToolbarBtn.textContent = showCalendar ? '달력 닫기' : '달력 열기';
+      calendarToolbarBtn.textContent = showCalendar ? '달력 닫기' : '달력';
       calendarToolbarBtn.disabled = false;
-      calendarToolbarBtn.title = showCalendar ? '오른쪽 달력 패널 닫기' : '오른쪽 달력 패널 열기';
+      calendarToolbarBtn.title = showCalendar ? '오른쪽 달력 패널 닫기' : '오른쪽 달력 패널 보기';
     } else if (isCompact) {
       calendarToolbarBtn.textContent = '달력(넓은 화면)';
       calendarToolbarBtn.disabled = true;
