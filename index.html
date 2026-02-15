@@ -1,0 +1,170 @@
+﻿<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WritingEditor Prototype</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="auth-gate" class="auth-gate">
+    <div class="auth-card">
+      <h2>WritingEditor 로그인</h2>
+      <p>익명으로 시작하거나, 이메일 계정으로 로그인/회원가입할 수 있습니다.</p>
+      <input id="sb-url" class="hidden" placeholder="https://xxxx.supabase.co" />
+      <input id="sb-anon" class="hidden" placeholder="supabase anon key" />
+      <input id="auth-email" type="email" placeholder="이메일" />
+      <input id="auth-password" type="password" placeholder="비밀번호" />
+      <div class="auth-actions">
+        <button type="button" id="auth-save-config" class="hidden">설정 저장</button>
+        <button type="button" id="auth-signup">회원가입</button>
+        <button type="button" id="auth-login">로그인</button>
+        <button type="button" id="auth-anon-login">익명으로 시작</button>
+        <button type="button" id="withdraw-btn" class="danger-btn hidden">회원 탈퇴</button>
+      </div>
+      <small id="auth-status"></small>
+    </div>
+  </div>
+
+  <div id="app" class="app">
+    <aside id="sidebar" class="sidebar">
+      <div class="sidebar-header">
+        <h1>문서 트리</h1>
+        <button id="toggle-tree-btn" class="panel-icon-btn" type="button" title="문서트리 숨기기" aria-label="문서트리 숨기기">◀</button>
+      </div>
+      <div id="tree" class="tree"></div>
+    </aside>
+    <div id="sidebar-resizer" class="sidebar-resizer" aria-hidden="true"></div>
+
+    <main class="main">
+      <header class="toolbar">
+        <div class="left-tools">
+          <button id="split-off">단일</button>
+          <button id="split-vertical">좌우 분할</button>
+          <button id="split-horizontal">상하 분할</button>
+          <button id="history-btn">히스토리(최대10)</button>
+        </div>
+        <div class="right-tools">
+          <span id="user-email" class="pill"></span>
+          <button id="logout-btn">로그아웃</button>
+          <button id="upgrade-account-btn" class="hidden">회원가입</button>
+          <button id="sync-now-btn">지금 동기화</button>
+          <span id="sync-status" class="pill">로그인 필요</span>
+          <div class="export-wrap">
+            <button id="export-btn" type="button" aria-expanded="false">내보내기</button>
+            <div id="export-menu" class="export-menu hidden">
+              <button id="export-txt" type="button">TXT</button>
+              <button id="export-pdf" type="button">PDF</button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <section id="editor-area" class="editor-area single">
+        <div id="pane-a" class="pane active">
+          <div class="pane-head">왼쪽 문서</div>
+          <textarea id="editor-a" placeholder="여기에 글을 쓰세요..."></textarea>
+        </div>
+        <div id="pane-b" class="pane hidden">
+          <div class="pane-head">오른쪽 문서</div>
+          <textarea id="editor-b" placeholder="두 번째 문서..."></textarea>
+        </div>
+      </section>
+    </main>
+
+    <aside class="stats-panel">
+      <section class="stats-row">
+        <div class="timer-box">
+          <div class="timer-head">
+            <strong>Pomodoro</strong>
+            <button id="toggle-calendar-btn" class="panel-icon-btn" type="button" title="달력 숨기기" aria-label="달력 숨기기">▶</button>
+          </div>
+          <span id="timer-label">집중</span>
+          <span id="timer-display">25:00</span>
+          <div>
+            <button id="timer-toggle">시작</button>
+            <button id="timer-skip">스킵</button>
+          </div>
+        </div>
+        <div class="daily-box">
+          <strong>오늘 기록</strong>
+          <span id="daily-stats">공백 포함: 0
+공백 제외: 0
+집중 횟수: 0
+집중 시간: 00:00:00</span>
+        </div>
+      </section>
+      <div class="stats-panel-header">
+        <h2>달력 달성</h2>
+      </div>
+      <div class="calendar-tools">
+        <input id="goal-input" type="number" min="0" placeholder="오늘 목표 글자 수" />
+        <span id="progress-pill" class="pill">0 / 0</span>
+      </div>
+      <div id="calendar" class="calendar"></div>
+      <p>● 목표 달성일</p>
+    </aside>
+  </div>
+
+  <button id="show-tree-bar" class="edge-bar left hidden" type="button" title="문서트리 보이기" aria-label="문서트리 보이기"></button>
+  <button id="show-calendar-bar" class="edge-bar right hidden" type="button" title="달력 보이기" aria-label="달력 보이기"></button>
+
+  <dialog id="history-dialog">
+    <h3>저장 히스토리 (최대 10개)</h3>
+    <input id="history-search" type="text" placeholder="히스토리 검색 (파일명/동작)" />
+    <ul id="history-list"></ul>
+    <button id="history-close">닫기</button>
+  </dialog>
+
+  <dialog id="withdraw-dialog" class="danger-dialog">
+    <h3>회원 탈퇴 (되돌릴 수 없음)</h3>
+    <p class="danger-copy">
+      경고: 이 작업을 실행하면 계정과 저장된 모든 데이터가 즉시 삭제됩니다.
+      삭제 후에는 복구가 불가능합니다.
+    </p>
+    <p class="danger-strong">탈퇴 전, 삭제할 계정을 다시 확인합니다(일반 계정은 재로그인 필요).</p>
+    <input id="withdraw-email" type="email" autocomplete="username" placeholder="탈퇴할 계정 이메일" />
+    <input id="withdraw-password" type="password" autocomplete="current-password" placeholder="비밀번호 (재로그인 확인용)" />
+    <ul class="danger-list">
+      <li>클라우드 저장 상태(editor_states)가 즉시 삭제됩니다.</li>
+      <li>계정 자체가 삭제되어 다시 로그인할 수 없습니다.</li>
+      <li>삭제 완료 후에는 복구가 절대 불가능합니다.</li>
+    </ul>
+    <label class="danger-check">
+      <input id="withdraw-confirm-check" type="checkbox" />
+      위 내용을 이해했으며, 즉시 영구 삭제에 동의합니다.
+    </label>
+    <label for="withdraw-confirm-text">확인 문구 입력: <strong>회원탈퇴</strong></label>
+    <input id="withdraw-confirm-text" type="text" autocomplete="off" placeholder="회원탈퇴" />
+    <div class="danger-actions">
+      <button id="withdraw-cancel-btn" type="button">취소</button>
+      <button id="withdraw-confirm-btn" type="button" class="danger-btn" disabled>즉시 탈퇴 및 영구 삭제</button>
+    </div>
+  </dialog>
+
+  <dialog id="upgrade-dialog">
+    <h3>익명 계정 회원가입</h3>
+    <p>이메일/비밀번호를 등록해 현재 익명 계정을 일반 계정으로 전환합니다.</p>
+    <input id="upgrade-email" type="email" autocomplete="email" placeholder="이메일" />
+    <input id="upgrade-password" type="password" autocomplete="new-password" placeholder="비밀번호" />
+    <div class="danger-actions">
+      <button id="upgrade-cancel-btn" type="button">취소</button>
+      <button id="upgrade-confirm-btn" type="button">회원가입 완료</button>
+    </div>
+  </dialog>
+
+  <script src="app.js?v=56"></script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
