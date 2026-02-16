@@ -1969,6 +1969,14 @@ function renderCalendar() {
     el.title = `${key}\n기준: ${goalMetric === 'noSpaces' ? '공백 제외' : '공백 포함'}\n목표 글자수: ${formatNumber(target)}\n실제 달성(공백 포함): ${formatNumber(actualWithSpaces)}\n실제 달성(공백 제외): ${formatNumber(actualNoSpaces)}`;
     box.appendChild(el);
   }
+  const filled = 7 + firstWeekday + last;
+  const trailingEmptyCount = (7 - (filled % 7)) % 7;
+  for (let i = 0; i < trailingEmptyCount; i += 1) {
+    const empty = document.createElement('div');
+    empty.className = 'day empty';
+    empty.setAttribute('aria-hidden', 'true');
+    box.appendChild(empty);
+  }
 }
 
 function renderCalendarTable() {
