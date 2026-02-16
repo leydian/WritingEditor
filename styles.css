@@ -533,6 +533,11 @@ textarea:focus { outline: none; }
   border-radius: 999px;
 }
 
+#sync-status {
+  white-space: pre-line;
+  line-height: 1.35;
+}
+
 .danger-dialog {
   width: min(560px, 92vw);
   background: #111827;

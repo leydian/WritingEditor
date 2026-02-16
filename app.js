@@ -48,6 +48,17 @@ const todayKey = () => {
   return `${p.year}-${String(p.month).padStart(2, '0')}-${String(p.day).padStart(2, '0')}`;
 };
 
+function formatKstTimeLabel(date = new Date()) {
+  const time = new Intl.DateTimeFormat('ko-KR', {
+    timeZone: 'Asia/Seoul',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).format(date);
+  return `${time} (KST, UTC+09:00)`;
+}
+
 let supabase = null;
 let supabaseUser = null;
 let authSubscription = null;
@@ -1070,7 +1081,7 @@ async function pushRemoteState(options = {}) {
   lastSyncAt = Date.now();
   autoSyncRetryCount = 0;
   lastKnownRemoteUpdatedAt = payload.updated_at;
-  setSyncStatus(`클라우드 동기화 완료 (${new Date().toLocaleTimeString()})`, 'ok');
+  setSyncStatus(`클라우드 동기화 완료\n${formatKstTimeLabel(new Date())}`, 'ok');
   if (supabaseUser && supabaseUser.id && encryptionRequiredForUser(supabaseUser) && shouldEncryptCurrentState()) {
     markEncryptionMigrated(supabaseUser.id);
   }
