@@ -222,9 +222,9 @@ input { width: min(220px, 100%); }
 }
 
 .timer-config input {
-  width: 4.2ch;
-  min-width: 4.2ch;
-  max-width: 4.2ch;
+  width: 6.2ch;
+  min-width: 6.2ch;
+  max-width: 6.2ch;
   min-height: 30px;
   padding: 4px 6px;
   text-align: right;
