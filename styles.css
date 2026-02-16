@@ -7,9 +7,9 @@
   --line-soft: #4d5b5e;
   --text: #e8efea;
   --text-soft: #b8c6bc;
-  --focus: #7ed29c;
-  --accent: #2f8f5b;
-  --accent-2: #3da86c;
+  --focus: #8fb7a1;
+  --accent: #567b67;
+  --accent-2: #6f9581;
   --radius: 12px;
   --radius-lg: 16px;
   --shadow-sm: 0 8px 20px rgba(2, 8, 23, .22);
@@ -26,7 +26,7 @@ body {
   min-height: 100vh;
   background:
     radial-gradient(1200px 700px at 12% -12%, #2f3c3f 0%, transparent 58%),
-    radial-gradient(1000px 560px at 102% 2%, rgba(61, 168, 108, .2) 0%, transparent 66%),
+    radial-gradient(1000px 560px at 102% 2%, rgba(111, 149, 129, .14) 0%, transparent 66%),
     linear-gradient(180deg, var(--bg-soft) 0%, var(--bg) 100%);
   color: var(--text);
 }
@@ -64,18 +64,18 @@ body {
 }
 
 .sidebar-resizer {
-  background: #0f172a;
-  border-left: 1px solid #374151;
-  border-right: 1px solid #374151;
+  background: #242c2d;
+  border-left: 1px solid #4b585a;
+  border-right: 1px solid #4b585a;
   cursor: col-resize;
 }
 
 .sidebar-resizer:hover { background: #2f393b; }
 
 .calendar-resizer {
-  background: #0f172a;
-  border-left: 1px solid #374151;
-  border-right: 1px solid #374151;
+  background: #242c2d;
+  border-left: 1px solid #4b585a;
+  border-right: 1px solid #4b585a;
   cursor: col-resize;
 }
 
@@ -141,7 +141,7 @@ body {
   transform: translateY(-1px);
 }
 
-.tree-item.drag-over { outline: 1px dashed #3da86c; background: #2f463a; }
+.tree-item.drag-over { outline: 1px dashed var(--accent-2); background: #34463f; }
 
 .tree-act-btn {
   padding: 2px 8px;
@@ -149,7 +149,7 @@ body {
   line-height: 1.2;
 }
 
-.tree-rename-btn { background: #2f8f5b; border-color: #2f8f5b; }
+.tree-rename-btn { background: var(--accent); border-color: var(--accent); }
 
 .tree-del-btn {
   padding: 2px 8px;
@@ -225,7 +225,7 @@ textarea:focus-visible {
 
 input { width: min(220px, 100%); }
 
-.stats-row { display: flex; gap: 10px; padding: 10px; border-bottom: 1px solid #374151; }
+.stats-row { display: flex; gap: 10px; padding: 10px; border-bottom: 1px solid #4b585a; }
 
 .timer-box,
 .daily-box {
@@ -323,8 +323,8 @@ input { width: min(220px, 100%); }
 .editor-area.horizontal { grid-template-rows: 1fr 8px 1fr; }
 
 .editor-split-resizer {
-  background: #0f172a;
-  border: 1px solid #374151;
+  background: #242c2d;
+  border: 1px solid #4b585a;
   z-index: 3;
 }
 
@@ -366,7 +366,7 @@ input { width: min(220px, 100%); }
   display: flex;
   gap: 6px;
   padding: 8px;
-  background: linear-gradient(180deg, rgba(17, 27, 45, .98) 0%, rgba(13, 22, 37, .98) 100%);
+  background: linear-gradient(180deg, rgba(39, 48, 49, .98) 0%, rgba(32, 39, 40, .98) 100%);
   border: 1px solid rgba(126, 210, 156, .22);
   border-radius: 10px;
   z-index: 40;
@@ -400,8 +400,8 @@ input { width: min(220px, 100%); }
   padding: 0;
   border-radius: 0;
   z-index: 50;
-  background: linear-gradient(180deg, #566466 0%, #334155 100%);
-  border: 1px solid #64748b;
+  background: linear-gradient(180deg, #5b696a 0%, #445253 100%);
+  border: 1px solid #6a787a;
   opacity: .75;
   transition: opacity .18s ease, width .18s ease;
 }
@@ -415,7 +415,7 @@ textarea {
   width: 100%;
   resize: none;
   border: none;
-  background: linear-gradient(180deg, #0b1426 0%, #0a1221 100%);
+  background: linear-gradient(180deg, #171e1f 0%, #13191a 100%);
   color: #f9fafb;
   padding: 18px;
   font-size: 17px;
@@ -434,8 +434,8 @@ textarea:focus { outline: none; }
 }
 
 .calendar-view-toggle button.active {
-  background: #2f8f5b;
-  border-color: #3da86c;
+  background: var(--accent);
+  border-color: var(--accent-2);
 }
 
 .calendar-table-wrap {
@@ -454,7 +454,7 @@ textarea:focus { outline: none; }
 
 .calendar-table th,
 .calendar-table td {
-  border-bottom: 1px solid #334155;
+  border-bottom: 1px solid #445253;
   padding: 6px 8px;
   text-align: left;
 }
@@ -506,7 +506,7 @@ textarea:focus { outline: none; }
   min-height: auto;
   padding: 0;
   margin: 0;
-  accent-color: #3da86c;
+  accent-color: var(--accent-2);
 }
 
 .day {
@@ -518,7 +518,7 @@ textarea:focus { outline: none; }
   font-size: 12px;
 }
 
-.day.hit::after { content: '●'; color: #3da86c; display: block; font-size: 11px; }
+.day.hit::after { content: '●'; color: var(--accent-2); display: block; font-size: 11px; }
 
 .pill {
   padding: 6px 10px;
@@ -592,7 +592,7 @@ textarea:focus { outline: none; }
     z-index: 12;
     margin: 8px;
     border-radius: 14px;
-    border: 1px solid #334155;
+    border: 1px solid #445253;
     background: rgba(15, 23, 42, .84);
     backdrop-filter: blur(8px);
     box-shadow: 0 10px 28px rgba(2, 8, 23, .3);
