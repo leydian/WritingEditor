@@ -100,6 +100,15 @@ body {
 .stats-panel-header h2,
 .sidebar-header h1 { margin: 0; }
 
+.stats-panel-header h2,
+.timer-head strong,
+.daily-box strong {
+  margin: 0;
+  font-size: 1.25rem;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
 .tree-item {
   padding: 8px 9px;
   border-radius: 10px;
@@ -229,7 +238,25 @@ input { width: min(220px, 100%); }
 }
 
 .timer-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-#timer-display { font-size: 24px; font-weight: 700; }
+
+.timer-status-line {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+#timer-label {
+  color: var(--text-soft);
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+#timer-display {
+  font-size: 24px;
+  font-weight: 700;
+  white-space: nowrap;
+}
 
 .timer-config {
   display: flex;
@@ -265,6 +292,20 @@ input { width: min(220px, 100%); }
   padding: 4px 10px;
   margin-left: 2px;
 }
+
+.timer-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.timer-actions button {
+  flex: 1;
+}
+
+.timer-box .timer-head { order: 1; }
+.timer-box .timer-config { order: 2; }
+.timer-box .timer-status-line { order: 3; }
+.timer-box .timer-actions { order: 4; }
 
 .stats-panel .stats-row {
   flex-direction: column;

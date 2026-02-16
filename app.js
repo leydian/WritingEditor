@@ -1567,7 +1567,13 @@ function renderCalendarTable() {
   table.innerHTML = '';
 
   const thead = document.createElement('thead');
-  thead.innerHTML = '<tr><th>날짜</th><th>기준</th><th>목표</th><th>공백 포함</th><th>공백 제외</th><th>달성</th></tr>';
+  const headRow = document.createElement('tr');
+  ['날짜', '기준', '목표', '공백 포함', '공백 제외', '달성'].forEach((title) => {
+    const th = document.createElement('th');
+    th.textContent = title;
+    headRow.appendChild(th);
+  });
+  thead.appendChild(headRow);
   table.appendChild(thead);
 
   const tbody = document.createElement('tbody');
@@ -1586,7 +1592,19 @@ function renderCalendarTable() {
     const actualForGoal = getActualByGoalMetric(actualWithSpaces, actualNoSpaces, goalMetric);
     const achieved = target > 0 && actualForGoal >= target;
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${key}</td><td>${goalMetric === 'noSpaces' ? '공백 제외' : '공백 포함'}</td><td>${formatNumber(target)}</td><td>${formatNumber(actualWithSpaces)}</td><td>${formatNumber(actualNoSpaces)}</td><td>${achieved ? '달성' : '-'}</td>`;
+    const cells = [
+      key,
+      goalMetric === 'noSpaces' ? '공백 제외' : '공백 포함',
+      formatNumber(target),
+      formatNumber(actualWithSpaces),
+      formatNumber(actualNoSpaces),
+      achieved ? '달성' : '-',
+    ];
+    cells.forEach((value) => {
+      const td = document.createElement('td');
+      td.textContent = value;
+      tr.appendChild(td);
+    });
     tbody.appendChild(tr);
   }
   table.appendChild(tbody);
