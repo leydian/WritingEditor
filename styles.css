@@ -443,11 +443,18 @@ textarea:focus { outline: none; }
   display: flex;
   gap: 8px;
   margin: 0 0 10px;
+  align-items: center;
+  flex-wrap: wrap;
 }
 
 .calendar-view-toggle button.active {
   background: var(--accent);
   border-color: var(--accent-2);
+}
+
+#calendar-period {
+  min-width: 112px;
+  text-align: center;
 }
 
 .calendar-table-wrap {

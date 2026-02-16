@@ -48,6 +48,25 @@ const todayKey = () => {
   return `${p.year}-${String(p.month).padStart(2, '0')}-${String(p.day).padStart(2, '0')}`;
 };
 
+function ensureCalendarCursor() {
+  if (calendarCursor && Number.isFinite(calendarCursor.year) && Number.isFinite(calendarCursor.month)) return;
+  const now = seoulDateParts();
+  calendarCursor = { year: now.year, month: now.month };
+}
+
+function shiftCalendarMonth(delta) {
+  ensureCalendarCursor();
+  const y = Number(calendarCursor.year);
+  const m = Number(calendarCursor.month);
+  const next = new Date(Date.UTC(y, (m - 1) + Number(delta || 0), 1));
+  calendarCursor = {
+    year: next.getUTCFullYear(),
+    month: next.getUTCMonth() + 1,
+  };
+  renderCalendar();
+  renderCalendarTable();
+}
+
 function formatKstTimeLabel(date = new Date()) {
   return new Intl.DateTimeFormat('ko-KR', {
     timeZone: 'Asia/Seoul',
@@ -77,6 +96,7 @@ let showWithdrawOnAuthGate = false;
 let mobileMiniSidebarOpen = false;
 let mobileMiniCalendarOpen = false;
 let calendarViewMode = 'calendar';
+let calendarCursor = null;
 let editorSplitDragging = false;
 let encryptionPasswordCache = '';
 let pendingAuthPassword = '';
@@ -1908,12 +1928,13 @@ function updateGoalLockUI() {
 function renderCalendar() {
   const box = $('calendar');
   const period = $('calendar-period');
+  if (!box) return;
   box.innerHTML = '';
 
-  const now = seoulDateParts();
-  const y = now.year;
-  const m = now.month;
-  const today = now.day;
+  ensureCalendarCursor();
+  const y = calendarCursor.year;
+  const m = calendarCursor.month;
+  const today = todayKey();
   if (period) period.textContent = `${y}년 ${m}월`;
   const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
 
@@ -1927,7 +1948,7 @@ function renderCalendar() {
     const actualForGoal = getActualByGoalMetric(actualWithSpaces, actualNoSpaces, goalMetric);
     const achieved = target > 0 && actualForGoal >= target;
     const el = document.createElement('div');
-    const isToday = d === today;
+    const isToday = key === today;
     el.className = `day ${achieved ? 'hit' : ''} ${isToday ? 'today' : ''}`.trim();
     el.textContent = d;
     el.title = `${key}\n기준: ${goalMetric === 'noSpaces' ? '공백 제외' : '공백 포함'}\n목표 글자수: ${formatNumber(target)}\n실제 달성(공백 포함): ${formatNumber(actualWithSpaces)}\n실제 달성(공백 제외): ${formatNumber(actualNoSpaces)}`;
@@ -1951,9 +1972,9 @@ function renderCalendarTable() {
   table.appendChild(thead);
 
   const tbody = document.createElement('tbody');
-  const now = seoulDateParts();
-  const y = now.year;
-  const m = now.month;
+  ensureCalendarCursor();
+  const y = calendarCursor.year;
+  const m = calendarCursor.month;
   const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
 
   for (let d = 1; d <= last; d += 1) {
@@ -1988,12 +2009,14 @@ function setCalendarViewMode(mode) {
   calendarViewMode = mode === 'table' ? 'table' : 'calendar';
   const calendar = $('calendar');
   const tableWrap = $('calendar-table-wrap');
-  const calendarBtn = $('calendar-view-btn');
-  const tableBtn = $('calendar-table-view-btn');
+  const modeToggleBtn = $('calendar-mode-toggle-btn');
   if (calendar) calendar.classList.toggle('hidden', calendarViewMode !== 'calendar');
   if (tableWrap) tableWrap.classList.toggle('hidden', calendarViewMode !== 'table');
-  if (calendarBtn) calendarBtn.classList.toggle('active', calendarViewMode === 'calendar');
-  if (tableBtn) tableBtn.classList.toggle('active', calendarViewMode === 'table');
+  if (modeToggleBtn) {
+    modeToggleBtn.textContent = calendarViewMode === 'calendar' ? '표 보기' : '달력 보기';
+    modeToggleBtn.setAttribute('aria-label', calendarViewMode === 'calendar' ? '표 보기로 전환' : '달력 보기로 전환');
+    modeToggleBtn.classList.toggle('active', true);
+  }
 }
 
 function switchSplit(mode) {
@@ -2925,8 +2948,9 @@ function bindEvents() {
   const goalInput = $('goal-input');
   const goalNoSpacesCheck = $('goal-no-spaces-check');
   const goalLockBtn = $('goal-lock-btn');
-  const calendarViewBtn = $('calendar-view-btn');
-  const calendarTableViewBtn = $('calendar-table-view-btn');
+  const calendarModeToggleBtn = $('calendar-mode-toggle-btn');
+  const calendarPrevMonthBtn = $('calendar-prev-month-btn');
+  const calendarNextMonthBtn = $('calendar-next-month-btn');
   const historyCloseBtn = $('history-close');
   const timerToggleBtn = $('timer-toggle');
   const timerSkipBtn = $('timer-skip');
@@ -3050,8 +3074,13 @@ function bindEvents() {
     saveState();
     updateGoalLockUI();
   };
-  if (calendarViewBtn) calendarViewBtn.onclick = () => setCalendarViewMode('calendar');
-  if (calendarTableViewBtn) calendarTableViewBtn.onclick = () => setCalendarViewMode('table');
+  if (calendarModeToggleBtn) {
+    calendarModeToggleBtn.onclick = () => {
+      setCalendarViewMode(calendarViewMode === 'calendar' ? 'table' : 'calendar');
+    };
+  }
+  if (calendarPrevMonthBtn) calendarPrevMonthBtn.onclick = () => shiftCalendarMonth(-1);
+  if (calendarNextMonthBtn) calendarNextMonthBtn.onclick = () => shiftCalendarMonth(1);
 
   if (historyCloseBtn) historyCloseBtn.onclick = () => {
     const dlg = $('history-dialog');
