@@ -1310,11 +1310,11 @@ function getActualByGoalMetric(actualWithSpaces, actualNoSpaces, metric) {
 function updateGoalLockUI() {
   const lockBtn = $('goal-lock-btn');
   const goalInput = $('goal-input');
-  const goalMetricSelect = $('goal-metric-select');
+  const goalNoSpacesCheck = $('goal-no-spaces-check');
   if (!lockBtn || !goalInput) return;
   const locked = isTodayGoalLocked();
   goalInput.classList.toggle('hidden', locked);
-  if (goalMetricSelect) goalMetricSelect.disabled = locked;
+  if (goalNoSpacesCheck) goalNoSpacesCheck.disabled = locked;
   lockBtn.textContent = locked ? '오늘 목표 고정 해제' : '오늘 목표 고정';
   lockBtn.title = locked ? '오늘 목표 글자수 고정을 해제합니다.' : '오늘 목표 글자수를 고정합니다.';
 }
@@ -1542,7 +1542,7 @@ function renderAll() {
   renderTimer();
   updateProgress();
   $('goal-input').value = state.goalByDate[todayKey()] || '';
-  if ($('goal-metric-select')) $('goal-metric-select').value = getGoalMetric(todayKey());
+  if ($('goal-no-spaces-check')) $('goal-no-spaces-check').checked = getGoalMetric(todayKey()) === 'noSpaces';
   updateGoalLockUI();
   setCalendarViewMode(calendarViewMode);
 }
@@ -1999,7 +1999,7 @@ function bindEvents() {
   const editorA = $('editor-a');
   const editorB = $('editor-b');
   const goalInput = $('goal-input');
-  const goalMetricSelect = $('goal-metric-select');
+  const goalNoSpacesCheck = $('goal-no-spaces-check');
   const goalLockBtn = $('goal-lock-btn');
   const calendarViewBtn = $('calendar-view-btn');
   const calendarTableViewBtn = $('calendar-table-view-btn');
@@ -2111,12 +2111,12 @@ function bindEvents() {
     saveState();
     updateProgress();
   });
-  if (goalMetricSelect) goalMetricSelect.addEventListener('change', (e) => {
+  if (goalNoSpacesCheck) goalNoSpacesCheck.addEventListener('change', (e) => {
     if (isTodayGoalLocked()) {
-      e.target.value = getGoalMetric(todayKey());
+      e.target.checked = getGoalMetric(todayKey()) === 'noSpaces';
       return;
     }
-    state.goalMetricByDate[todayKey()] = e.target.value === 'noSpaces' ? 'noSpaces' : 'withSpaces';
+    state.goalMetricByDate[todayKey()] = e.target.checked ? 'noSpaces' : 'withSpaces';
     saveState();
     updateProgress();
   });

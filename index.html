@@ -102,10 +102,10 @@
       </div>
       <div class="calendar-tools">
         <input id="goal-input" type="number" min="0" placeholder="오늘 목표 글자 수" />
-        <select id="goal-metric-select" title="오늘 목표 달성 기준">
-          <option value="withSpaces">공백 포함 기준</option>
-          <option value="noSpaces">공백 제외 기준</option>
-        </select>
+        <label class="goal-metric-check" for="goal-no-spaces-check">
+          <input id="goal-no-spaces-check" type="checkbox" />
+          공백 제외로 목표 체크
+        </label>
         <button id="goal-lock-btn" type="button">오늘 목표 고정</button>
         <span id="progress-pill" class="pill">0 / 0</span>
       </div>
@@ -168,7 +168,7 @@
   </dialog>
 
   <script src="error-utils.js?v=1"></script>
-  <script src="app.js?v=61"></script>
+  <script src="app.js?v=62"></script>
 </body>
 </html>
 

@@ -361,6 +361,22 @@ textarea:focus { outline: none; }
 
 .calendar-tools #goal-input { width: 100%; max-width: 220px; }
 
+.goal-metric-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-soft);
+}
+
+.goal-metric-check input[type='checkbox'] {
+  width: auto;
+  min-height: auto;
+  padding: 0;
+  margin: 0;
+  accent-color: #2563eb;
+}
+
 .day {
   padding: 6px 4px;
   background: #111827;
