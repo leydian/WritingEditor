@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://unpkg.com; connect-src 'self' https://*.supabase.co; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'" />
   <title>WritingEditor Prototype</title>
-  <link rel="stylesheet" href="styles.css?v=7" />
+  <link rel="stylesheet" href="styles.css?v=8" />
 </head>
 <body>
   <div id="auth-gate" class="auth-gate">
@@ -40,6 +40,7 @@
     <main class="main">
       <header class="toolbar">
         <div class="left-tools">
+          <button id="command-palette-btn" title="명령 팔레트 (Ctrl/Cmd+K)">명령 팔레트</button>
           <button id="split-off">단일</button>
           <button id="split-vertical">좌우 분할</button>
           <button id="split-horizontal">상하 분할</button>
@@ -63,16 +64,25 @@
         </div>
       </header>
 
-      <section id="editor-area" class="editor-area single">
-        <div id="pane-a" class="pane active">
-          <div class="pane-head">왼쪽 문서</div>
-          <textarea id="editor-a" placeholder="여기에 글을 쓰세요..."></textarea>
-        </div>
-        <div id="editor-split-resizer" class="editor-split-resizer hidden" aria-hidden="true"></div>
-        <div id="pane-b" class="pane hidden">
-          <div class="pane-head">오른쪽 문서</div>
-          <textarea id="editor-b" placeholder="두 번째 문서..."></textarea>
-        </div>
+      <section class="workspace">
+        <section id="editor-area" class="editor-area single">
+          <div id="pane-a" class="pane active">
+            <div class="pane-head">왼쪽 문서</div>
+            <textarea id="editor-a" placeholder="여기에 글을 쓰세요..."></textarea>
+          </div>
+          <div id="editor-split-resizer" class="editor-split-resizer hidden" aria-hidden="true"></div>
+          <div id="pane-b" class="pane hidden">
+            <div class="pane-head">오른쪽 문서</div>
+            <textarea id="editor-b" placeholder="두 번째 문서..."></textarea>
+          </div>
+        </section>
+        <aside id="outline-panel" class="outline-panel">
+          <div class="outline-head">
+            <strong>문서 아웃라인</strong>
+            <button id="outline-toggle-btn" type="button">숨기기</button>
+          </div>
+          <ul id="outline-list"></ul>
+        </aside>
       </section>
     </main>
 
@@ -137,8 +147,16 @@
 
   <dialog id="history-dialog">
     <h3>저장 히스토리 (최대 10개)</h3>
+    <p id="history-preview" class="history-preview">항목을 선택하면 변경량 미리보기가 표시됩니다.</p>
     <ul id="history-list"></ul>
     <button id="history-close">닫기</button>
+  </dialog>
+
+  <dialog id="command-palette-dialog" class="command-palette-dialog">
+    <h3>명령 팔레트</h3>
+    <input id="command-palette-input" type="text" placeholder="명령 검색..." autocomplete="off" />
+    <ul id="command-palette-list"></ul>
+    <p class="command-palette-help">Enter: 실행 · Esc: 닫기</p>
   </dialog>
 
   <dialog id="withdraw-dialog" class="danger-dialog">
@@ -191,7 +209,7 @@
   <script src="crypto-utils.js?v=1"></script>
   <script src="state-utils.js?v=1"></script>
   <script src="error-utils.js?v=1"></script>
-  <script src="app.js?v=78"></script>
+  <script src="app.js?v=79"></script>
 </body>
 </html>
 

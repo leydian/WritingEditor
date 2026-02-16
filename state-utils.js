@@ -1,4 +1,4 @@
-(function initStateUtils(root, factory) {
+﻿(function initStateUtils(root, factory) {
   const api = factory();
   if (typeof module === 'object' && module.exports) {
     module.exports = api;
@@ -9,10 +9,23 @@
 }(typeof globalThis !== 'undefined' ? globalThis : this, () => {
   function defaultState() {
     return {
-      docs: [{ id: 'd1', name: '새 문서.txt', folderId: null, content: '' }],
+      stateVersion: 2,
+      docs: [{ id: 'd1', name: 'new-doc.txt', folderId: null, content: '' }],
       folders: [],
       activeDocA: 'd1',
       activeDocB: null,
+      ui: {
+        commandPalette: {
+          enabled: true,
+          recentCommands: [],
+        },
+      },
+      editor: {
+        outline: {
+          collapsed: false,
+          lastActiveHeadingId: null,
+        },
+      },
       split: 'single',
       goalByDate: {},
       goalLockedByDate: {},
@@ -37,12 +50,53 @@
     const merged = {
       ...base,
       ...raw,
+      ui: {
+        ...base.ui,
+        ...(raw.ui || {}),
+        commandPalette: {
+          ...base.ui.commandPalette,
+          ...((raw.ui && raw.ui.commandPalette) || {}),
+        },
+      },
+      editor: {
+        ...base.editor,
+        ...(raw.editor || {}),
+        outline: {
+          ...base.editor.outline,
+          ...((raw.editor && raw.editor.outline) || {}),
+        },
+      },
       pomodoro: { ...base.pomodoro, ...(raw.pomodoro || {}) },
     };
 
     if (!Array.isArray(merged.docs)) merged.docs = base.docs;
     if (!Array.isArray(merged.folders)) merged.folders = [];
     if (!Array.isArray(merged.historyEntries)) merged.historyEntries = [];
+    merged.stateVersion = 2;
+
+    if (!merged.ui || typeof merged.ui !== 'object') merged.ui = { ...base.ui };
+    if (!merged.ui.commandPalette || typeof merged.ui.commandPalette !== 'object') {
+      merged.ui.commandPalette = { ...base.ui.commandPalette };
+    }
+    merged.ui.commandPalette.enabled = merged.ui.commandPalette.enabled !== false;
+    if (!Array.isArray(merged.ui.commandPalette.recentCommands)) {
+      merged.ui.commandPalette.recentCommands = [];
+    } else {
+      merged.ui.commandPalette.recentCommands = merged.ui.commandPalette.recentCommands
+        .map((x) => String(x || '').trim())
+        .filter((x) => x)
+        .slice(0, 8);
+    }
+
+    if (!merged.editor || typeof merged.editor !== 'object') merged.editor = { ...base.editor };
+    if (!merged.editor.outline || typeof merged.editor.outline !== 'object') {
+      merged.editor.outline = { ...base.editor.outline };
+    }
+    merged.editor.outline.collapsed = !!merged.editor.outline.collapsed;
+    merged.editor.outline.lastActiveHeadingId = merged.editor.outline.lastActiveHeadingId
+      ? String(merged.editor.outline.lastActiveHeadingId)
+      : null;
+
     if (!merged.goalLockedByDate || typeof merged.goalLockedByDate !== 'object') merged.goalLockedByDate = {};
     if (!merged.goalMetricByDate || typeof merged.goalMetricByDate !== 'object') merged.goalMetricByDate = {};
     if (Object.prototype.hasOwnProperty.call(merged, 'historyByDoc')) delete merged.historyByDoc;
@@ -103,6 +157,21 @@
     }
     merged.pomodoro.running = !!merged.pomodoro.running;
 
+    const toInt = (value) => {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return 0;
+      return Math.trunc(n);
+    };
+    merged.historyEntries = merged.historyEntries.map((entry) => {
+      const next = entry && typeof entry === 'object' ? { ...entry } : {};
+      const srcMeta = next.meta && typeof next.meta === 'object' ? next.meta : {};
+      next.meta = {
+        charDelta: toInt(srcMeta.charDelta),
+        paraDelta: toInt(srcMeta.paraDelta),
+      };
+      return next;
+    });
+
     return merged;
   }
 
@@ -125,6 +194,10 @@
       docId: meta.docId || null,
       docName: meta.docName || null,
       summary: meta.summary || '',
+      meta: {
+        charDelta: Number.isFinite(Number(meta.charDelta)) ? Math.trunc(Number(meta.charDelta)) : 0,
+        paraDelta: Number.isFinite(Number(meta.paraDelta)) ? Math.trunc(Number(meta.paraDelta)) : 0,
+      },
       snapshot,
     };
   }

@@ -9,6 +9,7 @@ const AUTO_SYNC_INTERVAL_MS = 30 * 60 * 1000;
 const AUTO_SYNC_RETRY_BASE_MS = 15 * 1000;
 const AUTO_SYNC_RETRY_MAX = 3;
 const HISTORY_AUTO_SAVE_MS = 10 * 60 * 1000;
+const COMMAND_PALETTE_RECENT_LIMIT = 8;
 const SUPABASE_SDK_URLS = [
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js',
   'https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js',
@@ -72,6 +73,8 @@ let pendingAuthPassword = '';
 let pendingEncryptedLocalState = null;
 let localEncryptedWriteSeq = 0;
 let encryptionUnlockResolver = null;
+let commandPaletteSelection = 0;
+let lastOutlineHeadings = [];
 const dirtyDocIds = new Set();
 const layoutPrefs = loadLayoutPrefs();
 
@@ -113,10 +116,23 @@ function saveLayoutPrefs() {
 function defaultState() {
   if (stateUtils) return stateUtils.defaultState();
   return {
+    stateVersion: 2,
     docs: [{ id: 'd1', name: '새 문서.txt', folderId: null, content: '' }],
     folders: [],
     activeDocA: 'd1',
     activeDocB: null,
+    ui: {
+      commandPalette: {
+        enabled: true,
+        recentCommands: [],
+      },
+    },
+    editor: {
+      outline: {
+        collapsed: false,
+        lastActiveHeadingId: null,
+      },
+    },
     split: 'single',
     goalByDate: {},
     goalLockedByDate: {},
@@ -142,12 +158,50 @@ function normalizeState(raw) {
   const merged = {
     ...base,
     ...raw,
+    ui: {
+      ...base.ui,
+      ...(raw.ui || {}),
+      commandPalette: {
+        ...base.ui.commandPalette,
+        ...((raw.ui && raw.ui.commandPalette) || {}),
+      },
+    },
+    editor: {
+      ...base.editor,
+      ...(raw.editor || {}),
+      outline: {
+        ...base.editor.outline,
+        ...((raw.editor && raw.editor.outline) || {}),
+      },
+    },
     pomodoro: { ...base.pomodoro, ...(raw.pomodoro || {}) },
   };
 
   if (!Array.isArray(merged.docs)) merged.docs = base.docs;
   if (!Array.isArray(merged.folders)) merged.folders = [];
   if (!Array.isArray(merged.historyEntries)) merged.historyEntries = [];
+  merged.stateVersion = 2;
+  if (!merged.ui || typeof merged.ui !== 'object') merged.ui = { ...base.ui };
+  if (!merged.ui.commandPalette || typeof merged.ui.commandPalette !== 'object') {
+    merged.ui.commandPalette = { ...base.ui.commandPalette };
+  }
+  merged.ui.commandPalette.enabled = merged.ui.commandPalette.enabled !== false;
+  if (!Array.isArray(merged.ui.commandPalette.recentCommands)) {
+    merged.ui.commandPalette.recentCommands = [];
+  } else {
+    merged.ui.commandPalette.recentCommands = merged.ui.commandPalette.recentCommands
+      .map((x) => String(x || '').trim())
+      .filter((x) => x)
+      .slice(0, COMMAND_PALETTE_RECENT_LIMIT);
+  }
+  if (!merged.editor || typeof merged.editor !== 'object') merged.editor = { ...base.editor };
+  if (!merged.editor.outline || typeof merged.editor.outline !== 'object') {
+    merged.editor.outline = { ...base.editor.outline };
+  }
+  merged.editor.outline.collapsed = !!merged.editor.outline.collapsed;
+  merged.editor.outline.lastActiveHeadingId = merged.editor.outline.lastActiveHeadingId
+    ? String(merged.editor.outline.lastActiveHeadingId)
+    : null;
   if (!merged.goalLockedByDate || typeof merged.goalLockedByDate !== 'object') merged.goalLockedByDate = {};
   if (!merged.goalMetricByDate || typeof merged.goalMetricByDate !== 'object') merged.goalMetricByDate = {};
   // Drop deprecated state key from older snapshots.
@@ -208,6 +262,20 @@ function normalizeState(raw) {
       : merged.pomodoroMinutes.break * 60;
   }
   merged.pomodoro.running = !!merged.pomodoro.running;
+  merged.historyEntries = merged.historyEntries.map((entry) => {
+    const next = entry && typeof entry === 'object' ? { ...entry } : {};
+    const srcMeta = next.meta && typeof next.meta === 'object' ? next.meta : {};
+    const toInt = (value) => {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return 0;
+      return Math.trunc(n);
+    };
+    next.meta = {
+      charDelta: toInt(srcMeta.charDelta),
+      paraDelta: toInt(srcMeta.paraDelta),
+    };
+    return next;
+  });
 
   return merged;
 }
@@ -1496,10 +1564,47 @@ function cloneStateForHistory() {
   return snapshot;
 }
 
+function countParagraphs(text) {
+  return String(text || '')
+    .split(/\n\s*\n/g)
+    .map((chunk) => chunk.trim())
+    .filter((chunk) => chunk.length > 0)
+    .length;
+}
+
+function getDocContentFromSnapshot(snapshot, docId) {
+  if (!snapshot || !Array.isArray(snapshot.docs)) return '';
+  const target = snapshot.docs.find((doc) => doc && doc.id === docId)
+    || snapshot.docs.find((doc) => doc && doc.id === snapshot.activeDocA)
+    || snapshot.docs[0];
+  return target && typeof target.content === 'string' ? target.content : '';
+}
+
+function getHistoryDeltaMeta(snapshot, meta = {}) {
+  const docId = meta.docId || state.activeDocA || null;
+  const baseline = Array.isArray(state.historyEntries) && state.historyEntries[0]
+    ? state.historyEntries[0].snapshot
+    : null;
+  const nowText = getDocContentFromSnapshot(snapshot, docId);
+  const beforeText = getDocContentFromSnapshot(baseline, docId);
+  return {
+    charDelta: nowText.length - beforeText.length,
+    paraDelta: countParagraphs(nowText) - countParagraphs(beforeText),
+  };
+}
+
+function formatSignedDelta(value) {
+  const n = Number(value) || 0;
+  if (n > 0) return `+${n}`;
+  return String(n);
+}
+
 function addHistoryEntry(trigger, meta = {}, snapshotOverride = null) {
   const snapshot = snapshotOverride || cloneStateForHistory();
+  const deltaMeta = getHistoryDeltaMeta(snapshot, meta);
+  const payloadMeta = { ...meta, ...deltaMeta };
   if (stateUtils) {
-    const entry = stateUtils.createHistoryEntry(trigger, meta, snapshot);
+    const entry = stateUtils.createHistoryEntry(trigger, payloadMeta, snapshot);
     state.historyEntries = stateUtils.prependHistoryEntry(state.historyEntries, entry, 10);
     return;
   }
@@ -1508,10 +1613,14 @@ function addHistoryEntry(trigger, meta = {}, snapshotOverride = null) {
     id: Date.now() + Math.floor(Math.random() * 1000),
     savedAt: new Date().toISOString(),
     trigger,
-    scope: meta.scope || 'doc',
-    docId: meta.docId || null,
-    docName: meta.docName || null,
-    summary: meta.summary || '',
+    scope: payloadMeta.scope || 'doc',
+    docId: payloadMeta.docId || null,
+    docName: payloadMeta.docName || null,
+    summary: payloadMeta.summary || '',
+    meta: {
+      charDelta: payloadMeta.charDelta || 0,
+      paraDelta: payloadMeta.paraDelta || 0,
+    },
     snapshot,
   });
   state.historyEntries = arr.slice(0, 10);
@@ -1574,6 +1683,7 @@ function updateEditorPane(pane, value) {
   markDocDirty(doc.id);
   updateProgress();
   saveState();
+  renderOutline();
 }
 
 function manualSavePane(pane) {
@@ -1647,6 +1757,7 @@ function renderEditors() {
 
   renderPaneHead('pane-a', `왼쪽: ${a && a.name ? a.name : '-'}`, 'a');
   renderPaneHead('pane-b', `오른쪽/아래: ${b && b.name ? b.name : '-'}`, 'b');
+  renderOutline();
 }
 
 function getSplitRatio(mode = state.split) {
@@ -1907,6 +2018,208 @@ function switchSplit(mode) {
   updateProgress();
 }
 
+function ensureUiSubState() {
+  if (!state.ui || typeof state.ui !== 'object') state.ui = {};
+  if (!state.ui.commandPalette || typeof state.ui.commandPalette !== 'object') {
+    state.ui.commandPalette = { enabled: true, recentCommands: [] };
+  }
+  if (!Array.isArray(state.ui.commandPalette.recentCommands)) state.ui.commandPalette.recentCommands = [];
+  if (!state.editor || typeof state.editor !== 'object') state.editor = {};
+  if (!state.editor.outline || typeof state.editor.outline !== 'object') {
+    state.editor.outline = { collapsed: false, lastActiveHeadingId: null };
+  }
+}
+
+function openHistoryDialog() {
+  renderHistory();
+  const dlg = $('history-dialog');
+  if (dlg && typeof dlg.showModal === 'function') dlg.showModal();
+}
+
+function getCommandPaletteCommands() {
+  return [
+    { id: 'split-single', label: '레이아웃: 단일', shortcut: 'Alt+1', run: () => switchSplit('single') },
+    { id: 'split-vertical', label: '레이아웃: 좌우 분할', shortcut: 'Alt+\\', run: () => switchSplit('vertical') },
+    { id: 'split-horizontal', label: '레이아웃: 상하 분할', shortcut: 'Alt+-', run: () => switchSplit('horizontal') },
+    { id: 'sync-now', label: '지금 동기화', shortcut: '', run: () => handleManualSync() },
+    { id: 'history-open', label: '히스토리 열기', shortcut: '', run: () => openHistoryDialog() },
+    { id: 'export-txt', label: 'TXT 내보내기', shortcut: '', run: () => exportTxt() },
+    { id: 'export-pdf', label: 'PDF 내보내기', shortcut: '', run: () => exportPdf() },
+    { id: 'outline-toggle', label: '아웃라인 패널 토글', shortcut: '', run: () => toggleOutlinePanel() },
+  ];
+}
+
+function trackRecentCommand(commandId) {
+  ensureUiSubState();
+  const list = state.ui.commandPalette.recentCommands.filter((id) => id !== commandId);
+  list.unshift(commandId);
+  state.ui.commandPalette.recentCommands = list.slice(0, COMMAND_PALETTE_RECENT_LIMIT);
+  saveState();
+}
+
+function getFilteredCommands() {
+  const input = $('command-palette-input');
+  const query = input ? String(input.value || '').trim().toLowerCase() : '';
+  const commands = getCommandPaletteCommands();
+  ensureUiSubState();
+  const recent = new Map(
+    state.ui.commandPalette.recentCommands.map((id, idx) => [id, idx])
+  );
+  const filtered = query
+    ? commands.filter((cmd) => cmd.label.toLowerCase().includes(query) || cmd.id.includes(query))
+    : commands;
+  return filtered.sort((a, b) => {
+    const ar = recent.has(a.id) ? recent.get(a.id) : Number.POSITIVE_INFINITY;
+    const br = recent.has(b.id) ? recent.get(b.id) : Number.POSITIVE_INFINITY;
+    return ar - br;
+  });
+}
+
+function renderCommandPalette() {
+  const list = $('command-palette-list');
+  if (!list) return;
+  list.innerHTML = '';
+  const commands = getFilteredCommands();
+  if (commandPaletteSelection >= commands.length) commandPaletteSelection = Math.max(0, commands.length - 1);
+  commands.forEach((cmd, idx) => {
+    const li = document.createElement('li');
+    li.className = `command-item ${idx === commandPaletteSelection ? 'active' : ''}`.trim();
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = cmd.label;
+    btn.onclick = () => runCommandFromPalette(cmd.id);
+    const shortcut = document.createElement('span');
+    shortcut.className = 'command-shortcut';
+    shortcut.textContent = cmd.shortcut || '';
+    li.appendChild(btn);
+    li.appendChild(shortcut);
+    list.appendChild(li);
+  });
+  if (commands.length === 0) {
+    const li = document.createElement('li');
+    li.className = 'command-item';
+    li.textContent = '검색 결과가 없습니다.';
+    list.appendChild(li);
+  }
+}
+
+function openCommandPalette() {
+  ensureUiSubState();
+  if (state.ui.commandPalette.enabled === false) return;
+  const dlg = $('command-palette-dialog');
+  const input = $('command-palette-input');
+  if (!dlg || typeof dlg.showModal !== 'function' || !input) return;
+  commandPaletteSelection = 0;
+  input.value = '';
+  renderCommandPalette();
+  dlg.showModal();
+  setTimeout(() => input.focus(), 0);
+}
+
+function closeCommandPalette() {
+  const dlg = $('command-palette-dialog');
+  if (!dlg || typeof dlg.close !== 'function') return;
+  dlg.close();
+}
+
+function runCommandFromPalette(commandId) {
+  const command = getCommandPaletteCommands().find((cmd) => cmd.id === commandId);
+  if (!command) return;
+  command.run();
+  trackRecentCommand(commandId);
+  closeCommandPalette();
+}
+
+function extractHeadings(text) {
+  const lines = String(text || '').split('\n');
+  const headings = [];
+  lines.forEach((line, index) => {
+    const mdMatch = line.match(/^(#{1,3})\s+(.+)$/);
+    if (mdMatch) {
+      headings.push({
+        id: `h-${index}`,
+        level: mdMatch[1].length,
+        title: mdMatch[2].trim(),
+        line: index,
+      });
+      return;
+    }
+    const numbered = line.match(/^(\d+)\.\s+(.+)$/);
+    if (numbered) {
+      headings.push({
+        id: `h-${index}`,
+        level: 2,
+        title: numbered[2].trim(),
+        line: index,
+      });
+    }
+  });
+  return headings.slice(0, 120);
+}
+
+function getActiveEditorAndDoc() {
+  const pane = activePane === 'b' && state.split !== 'single' ? 'b' : 'a';
+  const docId = pane === 'a' ? state.activeDocA : state.activeDocB;
+  const editor = pane === 'a' ? $('editor-a') : $('editor-b');
+  const doc = getDoc(docId);
+  return { pane, doc, editor };
+}
+
+function renderOutline() {
+  ensureUiSubState();
+  const panel = $('outline-panel');
+  const list = $('outline-list');
+  const toggleBtn = $('outline-toggle-btn');
+  if (!panel || !list || !toggleBtn) return;
+  panel.classList.toggle('hidden', !!state.editor.outline.collapsed);
+  toggleBtn.textContent = state.editor.outline.collapsed ? '보이기' : '숨기기';
+  list.innerHTML = '';
+  const { doc } = getActiveEditorAndDoc();
+  lastOutlineHeadings = extractHeadings(doc && doc.content ? doc.content : '');
+  if (lastOutlineHeadings.length === 0) {
+    const li = document.createElement('li');
+    li.className = 'outline-item';
+    li.textContent = '헤딩(#, ##, ###)을 입력하면 구조가 표시됩니다.';
+    list.appendChild(li);
+    return;
+  }
+  lastOutlineHeadings.forEach((heading) => {
+    const li = document.createElement('li');
+    const isActive = state.editor.outline.lastActiveHeadingId === heading.id;
+    li.className = `outline-item level-${Math.min(heading.level, 3)} ${isActive ? 'active' : ''}`.trim();
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = heading.title;
+    btn.onclick = () => navigateToHeading(heading.id);
+    li.appendChild(btn);
+    list.appendChild(li);
+  });
+}
+
+function navigateToHeading(headingId) {
+  const heading = lastOutlineHeadings.find((item) => item.id === headingId);
+  const { editor } = getActiveEditorAndDoc();
+  if (!heading || !editor) return;
+  const lines = editor.value.split('\n');
+  let offset = 0;
+  for (let i = 0; i < heading.line; i += 1) offset += lines[i].length + 1;
+  editor.focus();
+  editor.setSelectionRange(offset, offset);
+  const lineHeight = Number.parseInt(getComputedStyle(editor).lineHeight, 10) || 28;
+  editor.scrollTop = Math.max(0, heading.line * lineHeight - lineHeight * 2);
+  ensureUiSubState();
+  state.editor.outline.lastActiveHeadingId = heading.id;
+  renderOutline();
+  saveState();
+}
+
+function toggleOutlinePanel() {
+  ensureUiSubState();
+  state.editor.outline.collapsed = !state.editor.outline.collapsed;
+  saveState();
+  renderOutline();
+}
+
 function exportTxt() {
   const d = getDoc(state.activeDocA);
   if (!d) return;
@@ -2019,8 +2332,10 @@ function downloadBlob(blob, name) {
 
 function renderHistory() {
   const list = $('history-list');
+  const preview = $('history-preview');
   if (!list) return;
   list.innerHTML = '';
+  if (preview) preview.textContent = '항목을 선택하면 변경량 미리보기가 표시됩니다.';
   const entries = state.historyEntries || [];
   const triggerLabel = {
     'auto-10m': '자동저장(10분)',
@@ -2038,22 +2353,60 @@ function renderHistory() {
     let tail = h.summary || '';
     if (h.trigger === 'manual-sync' || h.scope === 'full') tail = '대상: 전체 동기화';
     if (h.trigger === 'manual-save') tail = `대상: ${h.docName || '-'}`;
-    li.textContent = `${new Date(h.savedAt).toLocaleString()} · ${label}${tail ? ` · ${tail}` : ''}`;
+    const meta = h.meta && typeof h.meta === 'object' ? h.meta : {};
+    li.textContent = `${new Date(h.savedAt).toLocaleString()} · ${label}${tail ? ` · ${tail}` : ''} · 글자 ${formatSignedDelta(meta.charDelta)} · 문단 ${formatSignedDelta(meta.paraDelta)}`;
 
-    const btn = document.createElement('button');
-    btn.textContent = '복원';
-    btn.onclick = () => {
-      if (!confirm('이 버전으로 복원할까요?')) return;
+    const previewBtn = document.createElement('button');
+    previewBtn.textContent = '미리보기';
+    previewBtn.onclick = () => {
+      if (!preview) return;
+      const docLabel = h.docName || h.docId || '문서';
+      preview.textContent = [
+        `기록: ${label}`,
+        `대상: ${docLabel}`,
+        `요약: ${tail || '-'}`,
+        `변경량: 글자 ${formatSignedDelta(meta.charDelta)}, 문단 ${formatSignedDelta(meta.paraDelta)}`,
+      ].join(' · ');
+    };
+
+    const restoreBtn = document.createElement('button');
+    restoreBtn.textContent = '안전복원';
+    restoreBtn.onclick = () => {
+      if (!confirm('현재 상태를 백업한 뒤 이 버전으로 복원할까요?')) return;
+      const backupSnapshot = cloneStateForHistory();
+      const backupMeta = {
+        scope: 'full',
+        summary: '안전 복원 전 자동 백업',
+        ...getHistoryDeltaMeta(backupSnapshot, { scope: 'full' }),
+      };
+      const backupEntry = stateUtils
+        ? stateUtils.createHistoryEntry('manual-save', backupMeta, backupSnapshot)
+        : {
+          id: Date.now() + Math.floor(Math.random() * 1000),
+          savedAt: new Date().toISOString(),
+          trigger: 'manual-save',
+          scope: backupMeta.scope,
+          docId: null,
+          docName: null,
+          summary: backupMeta.summary,
+          meta: {
+            charDelta: backupMeta.charDelta || 0,
+            paraDelta: backupMeta.paraDelta || 0,
+          },
+          snapshot: backupSnapshot,
+        };
       const keepHistory = Array.isArray(state.historyEntries) ? [...state.historyEntries] : [];
       replaceState(h.snapshot || {});
-      state.historyEntries = keepHistory;
+      state.historyEntries = [backupEntry, ...keepHistory].slice(0, 10);
       dirtyDocIds.clear();
       saveState();
       renderAll();
-      $('history-dialog').close();
+      const dlg = $('history-dialog');
+      if (dlg && typeof dlg.close === 'function') dlg.close();
     };
 
-    li.appendChild(btn);
+    li.appendChild(previewBtn);
+    li.appendChild(restoreBtn);
     list.appendChild(li);
   });
 
@@ -2162,6 +2515,7 @@ function applyPomodoroMinutesFromInputs() {
 function renderAll() {
   renderTree();
   renderEditors();
+  renderOutline();
   renderTimer();
   updateProgress();
   $('goal-input').value = state.goalByDate[todayKey()] || '';
@@ -2667,8 +3021,12 @@ function bindEvents() {
   const splitVerticalBtn = $('split-vertical');
   const splitHorizontalBtn = $('split-horizontal');
   const splitOffBtn = $('split-off');
+  const commandPaletteBtn = $('command-palette-btn');
+  const commandPaletteDialog = $('command-palette-dialog');
+  const commandPaletteInput = $('command-palette-input');
   const toggleTreeBtn = $('toggle-tree-btn');
   const toggleCalendarBtn = $('toggle-calendar-btn');
+  const outlineToggleBtn = $('outline-toggle-btn');
   const showTreeBar = $('show-tree-bar');
   const showCalendarBar = $('show-calendar-bar');
   const sidebarToolbarBtn = $('toggle-sidebar-toolbar-btn');
@@ -2711,6 +3069,8 @@ function bindEvents() {
   if (splitVerticalBtn) splitVerticalBtn.onclick = () => switchSplit('vertical');
   if (splitHorizontalBtn) splitHorizontalBtn.onclick = () => switchSplit('horizontal');
   if (splitOffBtn) splitOffBtn.onclick = () => switchSplit('single');
+  if (commandPaletteBtn) commandPaletteBtn.onclick = openCommandPalette;
+  if (outlineToggleBtn) outlineToggleBtn.onclick = toggleOutlinePanel;
   if (toggleTreeBtn) toggleTreeBtn.onclick = () => {
     if (window.innerWidth <= MOBILE_MINI_BREAKPOINT) {
       mobileMiniSidebarOpen = false;
@@ -2815,9 +3175,7 @@ function bindEvents() {
   if (calendarTableViewBtn) calendarTableViewBtn.onclick = () => setCalendarViewMode('table');
 
   if (historyBtn) historyBtn.onclick = () => {
-    renderHistory();
-    const dlg = $('history-dialog');
-    if (dlg && typeof dlg.showModal === 'function') dlg.showModal();
+    openHistoryDialog();
   };
   if (historyCloseBtn) historyCloseBtn.onclick = () => {
     const dlg = $('history-dialog');
@@ -2911,9 +3269,46 @@ function bindEvents() {
   }
   if (syncNowBtn) syncNowBtn.onclick = handleManualSync;
   document.addEventListener('keydown', (e) => {
+    const isCmdK = (e.ctrlKey || e.metaKey) && String(e.key).toLowerCase() === 'k';
+    if (isCmdK) {
+      e.preventDefault();
+      openCommandPalette();
+      return;
+    }
+    if (e.altKey && e.key === '1') switchSplit('single');
     if (e.altKey && e.key === '\\') switchSplit('vertical');
     if (e.altKey && e.key === '-') switchSplit('horizontal');
   });
+  if (commandPaletteInput) {
+    commandPaletteInput.addEventListener('input', () => {
+      commandPaletteSelection = 0;
+      renderCommandPalette();
+    });
+    commandPaletteInput.addEventListener('keydown', (e) => {
+      const commands = getFilteredCommands();
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        commandPaletteSelection = Math.min(commands.length - 1, commandPaletteSelection + 1);
+        renderCommandPalette();
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        commandPaletteSelection = Math.max(0, commandPaletteSelection - 1);
+        renderCommandPalette();
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (commands[commandPaletteSelection]) runCommandFromPalette(commands[commandPaletteSelection].id);
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        closeCommandPalette();
+      }
+    });
+  }
+  if (commandPaletteDialog) {
+    commandPaletteDialog.addEventListener('cancel', (e) => {
+      e.preventDefault();
+      closeCommandPalette();
+    });
+  }
 
   document.addEventListener('click', (e) => {
     if (window.innerWidth > MOBILE_MINI_BREAKPOINT) return;

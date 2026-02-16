@@ -1,10 +1,11 @@
-const assert = require('assert');
+﻿const assert = require('assert');
 const path = require('path');
 
 const stateUtils = require(path.join(__dirname, '..', 'state-utils.js'));
 
 function testNormalizeState() {
   const normalized = stateUtils.normalizeState({
+    stateVersion: 1,
     docs: [],
     folders: [],
     split: 'weird',
@@ -12,8 +13,12 @@ function testNormalizeState() {
     splitRatioByMode: { vertical: 5, horizontal: 95 },
     pomodoroMinutes: { focus: 0, break: 999 },
     pomodoro: { mode: 'bad', left: 0, running: 'yes' },
+    ui: { commandPalette: { enabled: false, recentCommands: [' a ', '', 'sync'] } },
+    editor: { outline: { collapsed: 1, lastActiveHeadingId: 123 } },
+    historyEntries: [{ id: 1, meta: { charDelta: '5', paraDelta: 'x' } }],
   });
 
+  assert.strictEqual(normalized.stateVersion, 2);
   assert.strictEqual(Array.isArray(normalized.docs), true);
   assert.strictEqual(normalized.docs.length, 1);
   assert.strictEqual(normalized.activeDocA, 'd1');
@@ -26,6 +31,12 @@ function testNormalizeState() {
   assert.strictEqual(normalized.splitRatioByMode.horizontal, 80);
   assert.strictEqual(normalized.pomodoroMinutes.focus, 1);
   assert.strictEqual(normalized.pomodoroMinutes.break, 180);
+  assert.strictEqual(normalized.ui.commandPalette.enabled, false);
+  assert.deepStrictEqual(normalized.ui.commandPalette.recentCommands, ['a', 'sync']);
+  assert.strictEqual(normalized.editor.outline.collapsed, true);
+  assert.strictEqual(normalized.editor.outline.lastActiveHeadingId, '123');
+  assert.strictEqual(normalized.historyEntries[0].meta.charDelta, 5);
+  assert.strictEqual(normalized.historyEntries[0].meta.paraDelta, 0);
 }
 
 function testHistoryHelpers() {
@@ -37,13 +48,15 @@ function testHistoryHelpers() {
 
   const entry = stateUtils.createHistoryEntry(
     'doc-edit',
-    { docId: 'd1', docName: '문서', summary: '저장', scope: 'doc' },
+    { docId: 'd1', docName: 'doc', summary: 'changed', scope: 'doc', charDelta: 12, paraDelta: -1 },
     { docs: [{ id: 'd1' }] },
     { now: new Date('2026-02-16T00:00:00.000Z'), nowMs: 1000, randomInt: 7 }
   );
   assert.strictEqual(entry.id, 1007);
   assert.strictEqual(entry.savedAt, '2026-02-16T00:00:00.000Z');
   assert.strictEqual(entry.docId, 'd1');
+  assert.strictEqual(entry.meta.charDelta, 12);
+  assert.strictEqual(entry.meta.paraDelta, -1);
 
   const capped = Array.from({ length: 12 }).reduce((acc, _, i) => (
     stateUtils.prependHistoryEntry(acc, { id: i }, 10)
