@@ -25,6 +25,7 @@
         vertical: 50,
         horizontal: 50,
       },
+      pomodoroMinutes: { focus: 25, break: 5 },
       pomodoro: { mode: 'focus', left: 25 * 60, running: false },
     };
   }
@@ -47,6 +48,16 @@
     if (Object.prototype.hasOwnProperty.call(merged, 'historyByDoc')) delete merged.historyByDoc;
     if (!merged.sessionsByDate || typeof merged.sessionsByDate !== 'object') merged.sessionsByDate = {};
     if (!merged.focusSecondsByDate || typeof merged.focusSecondsByDate !== 'object') merged.focusSecondsByDate = {};
+    if (!merged.pomodoroMinutes || typeof merged.pomodoroMinutes !== 'object') {
+      merged.pomodoroMinutes = { ...base.pomodoroMinutes };
+    }
+    const clampMinutes = (value, fallback) => {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return fallback;
+      return Math.max(1, Math.min(180, Math.round(n)));
+    };
+    merged.pomodoroMinutes.focus = clampMinutes(merged.pomodoroMinutes.focus, 25);
+    merged.pomodoroMinutes.break = clampMinutes(merged.pomodoroMinutes.break, 5);
     if (!merged.splitRatioByMode || typeof merged.splitRatioByMode !== 'object') {
       merged.splitRatioByMode = { ...base.splitRatioByMode };
     }
@@ -86,7 +97,9 @@
       merged.pomodoro.mode = 'focus';
     }
     if (typeof merged.pomodoro.left !== 'number' || Number.isNaN(merged.pomodoro.left) || merged.pomodoro.left <= 0) {
-      merged.pomodoro.left = merged.pomodoro.mode === 'focus' ? 25 * 60 : 5 * 60;
+      merged.pomodoro.left = merged.pomodoro.mode === 'focus'
+        ? merged.pomodoroMinutes.focus * 60
+        : merged.pomodoroMinutes.break * 60;
     }
     merged.pomodoro.running = !!merged.pomodoro.running;
 
@@ -138,7 +151,11 @@
     return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   }
 
-  function tickPomodoro(pomodoroInput) {
+  function tickPomodoro(pomodoroInput, durationsInput = null) {
+    const durations = {
+      focus: Math.max(1, Math.min(180, Math.round(Number(durationsInput && durationsInput.focus) || 25))),
+      break: Math.max(1, Math.min(180, Math.round(Number(durationsInput && durationsInput.break) || 5))),
+    };
     const p = {
       mode: pomodoroInput && pomodoroInput.mode === 'break' ? 'break' : 'focus',
       left: Number((pomodoroInput && pomodoroInput.left) || 0),
@@ -159,7 +176,7 @@
       completedMode = p.mode;
       if (completedMode === 'focus') sessionDelta = 1;
       p.mode = p.mode === 'focus' ? 'break' : 'focus';
-      p.left = p.mode === 'focus' ? 25 * 60 : 5 * 60;
+      p.left = p.mode === 'focus' ? durations.focus * 60 : durations.break * 60;
     }
 
     return { pomodoro: p, focusDelta, sessionDelta, completedMode };

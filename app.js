@@ -112,6 +112,7 @@ function defaultState() {
       vertical: 50,
       horizontal: 50,
     },
+    pomodoroMinutes: { focus: 25, break: 5 },
     pomodoro: { mode: 'focus', left: 25 * 60, running: false },
   };
 }
@@ -136,6 +137,16 @@ function normalizeState(raw) {
   if (Object.prototype.hasOwnProperty.call(merged, 'historyByDoc')) delete merged.historyByDoc;
   if (!merged.sessionsByDate || typeof merged.sessionsByDate !== 'object') merged.sessionsByDate = {};
   if (!merged.focusSecondsByDate || typeof merged.focusSecondsByDate !== 'object') merged.focusSecondsByDate = {};
+  if (!merged.pomodoroMinutes || typeof merged.pomodoroMinutes !== 'object') {
+    merged.pomodoroMinutes = { ...base.pomodoroMinutes };
+  }
+  const clampMinutes = (value, fallback) => {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return fallback;
+    return Math.max(1, Math.min(180, Math.round(n)));
+  };
+  merged.pomodoroMinutes.focus = clampMinutes(merged.pomodoroMinutes.focus, 25);
+  merged.pomodoroMinutes.break = clampMinutes(merged.pomodoroMinutes.break, 5);
   if (!merged.splitRatioByMode || typeof merged.splitRatioByMode !== 'object') {
     merged.splitRatioByMode = { ...base.splitRatioByMode };
   }
@@ -175,7 +186,9 @@ function normalizeState(raw) {
     merged.pomodoro.mode = 'focus';
   }
   if (typeof merged.pomodoro.left !== 'number' || Number.isNaN(merged.pomodoro.left) || merged.pomodoro.left <= 0) {
-    merged.pomodoro.left = merged.pomodoro.mode === 'focus' ? 25 * 60 : 5 * 60;
+    merged.pomodoro.left = merged.pomodoro.mode === 'focus'
+      ? merged.pomodoroMinutes.focus * 60
+      : merged.pomodoroMinutes.break * 60;
   }
   merged.pomodoro.running = !!merged.pomodoro.running;
 
@@ -1758,7 +1771,7 @@ function tickTimer() {
 
   if (stateUtils) {
     const date = todayKey();
-    const tick = stateUtils.tickPomodoro(state.pomodoro);
+    const tick = stateUtils.tickPomodoro(state.pomodoro, getPomodoroMinutes());
     state.pomodoro = tick.pomodoro;
     if (tick.focusDelta) {
       state.focusSecondsByDate[date] = (state.focusSecondsByDate[date] || 0) + tick.focusDelta;
@@ -1782,7 +1795,8 @@ function tickTimer() {
         state.sessionsByDate[date] = (state.sessionsByDate[date] || 0) + 1;
       }
       state.pomodoro.mode = state.pomodoro.mode === 'focus' ? 'break' : 'focus';
-      state.pomodoro.left = state.pomodoro.mode === 'focus' ? 25 * 60 : 5 * 60;
+      const mins = getPomodoroMinutes();
+      state.pomodoro.left = state.pomodoro.mode === 'focus' ? mins.focus * 60 : mins.break * 60;
       alert(`${completedMode === 'focus' ? '집중' : '휴식'} 완료! 다음: ${state.pomodoro.mode}`);
     }
   }
@@ -1799,10 +1813,50 @@ function ensureTimerInterval() {
 
 function renderTimer() {
   const sec = state.pomodoro.left;
+  const mins = getPomodoroMinutes();
+  const focusInput = $('pomodoro-focus-min');
+  const breakInput = $('pomodoro-break-min');
+  if (focusInput) focusInput.value = String(mins.focus);
+  if (breakInput) breakInput.value = String(mins.break);
   $('timer-label').textContent = state.pomodoro.mode === 'focus' ? '집중' : '휴식';
   $('timer-display').textContent = `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(sec % 60).padStart(2, '0')}`;
   const toggleBtn = $('timer-toggle');
   if (toggleBtn) toggleBtn.textContent = state.pomodoro.running ? '일시정지' : '시작';
+}
+
+function getPomodoroMinutes() {
+  const base = state && state.pomodoroMinutes && typeof state.pomodoroMinutes === 'object'
+    ? state.pomodoroMinutes
+    : { focus: 25, break: 5 };
+  const clamp = (value, fallback) => {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return fallback;
+    return Math.max(1, Math.min(180, Math.round(n)));
+  };
+  return {
+    focus: clamp(base.focus, 25),
+    break: clamp(base.break, 5),
+  };
+}
+
+function applyPomodoroMinutesFromInputs() {
+  const focusInput = $('pomodoro-focus-min');
+  const breakInput = $('pomodoro-break-min');
+  if (!focusInput || !breakInput) return;
+  const clamp = (value, fallback) => {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return fallback;
+    return Math.max(1, Math.min(180, Math.round(n)));
+  };
+  const focusMin = clamp(focusInput.value, 25);
+  const breakMin = clamp(breakInput.value, 5);
+  state.pomodoroMinutes = { focus: focusMin, break: breakMin };
+  state.pomodoro.running = false;
+  state.pomodoro.left = state.pomodoro.mode === 'focus' ? focusMin * 60 : breakMin * 60;
+  focusInput.value = String(focusMin);
+  breakInput.value = String(breakMin);
+  saveState();
+  renderTimer();
 }
 
 function renderAll() {
@@ -2296,6 +2350,9 @@ function bindEvents() {
   const exportPdfBtn = $('export-pdf');
   const timerToggleBtn = $('timer-toggle');
   const timerSkipBtn = $('timer-skip');
+  const pomodoroFocusMinInput = $('pomodoro-focus-min');
+  const pomodoroBreakMinInput = $('pomodoro-break-min');
+  const pomodoroApplyBtn = $('pomodoro-apply');
   const logoutBtn = $('logout-btn');
   const upgradeAccountBtn = $('upgrade-account-btn');
   const upgradeCancelBtn = $('upgrade-cancel-btn');
@@ -2471,6 +2528,9 @@ function bindEvents() {
     saveState();
     renderTimer();
   };
+  if (pomodoroApplyBtn) pomodoroApplyBtn.onclick = applyPomodoroMinutesFromInputs;
+  if (pomodoroFocusMinInput) pomodoroFocusMinInput.addEventListener('change', applyPomodoroMinutesFromInputs);
+  if (pomodoroBreakMinInput) pomodoroBreakMinInput.addEventListener('change', applyPomodoroMinutesFromInputs);
 
   if (logoutBtn) logoutBtn.onclick = authLogout;
   if (upgradeAccountBtn) upgradeAccountBtn.onclick = openUpgradeDialog;

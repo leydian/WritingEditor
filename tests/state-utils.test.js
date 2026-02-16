@@ -10,6 +10,7 @@ function testNormalizeState() {
     split: 'weird',
     historyByDoc: { legacy: true },
     splitRatioByMode: { vertical: 5, horizontal: 95 },
+    pomodoroMinutes: { focus: 0, break: 999 },
     pomodoro: { mode: 'bad', left: 0, running: 'yes' },
   });
 
@@ -19,10 +20,12 @@ function testNormalizeState() {
   assert.strictEqual(normalized.split, 'single');
   assert.strictEqual(Object.prototype.hasOwnProperty.call(normalized, 'historyByDoc'), false);
   assert.strictEqual(normalized.pomodoro.mode, 'focus');
-  assert.strictEqual(normalized.pomodoro.left, 1500);
+  assert.strictEqual(normalized.pomodoro.left, 60);
   assert.strictEqual(normalized.pomodoro.running, true);
   assert.strictEqual(normalized.splitRatioByMode.vertical, 20);
   assert.strictEqual(normalized.splitRatioByMode.horizontal, 80);
+  assert.strictEqual(normalized.pomodoroMinutes.focus, 1);
+  assert.strictEqual(normalized.pomodoroMinutes.break, 180);
 }
 
 function testHistoryHelpers() {
@@ -67,19 +70,19 @@ function testTickPomodoro() {
   assert.strictEqual(focusTick.pomodoro.left, 9);
   assert.strictEqual(focusTick.pomodoro.mode, 'focus');
 
-  const focusDone = stateUtils.tickPomodoro({ mode: 'focus', left: 1, running: true });
+  const focusDone = stateUtils.tickPomodoro({ mode: 'focus', left: 1, running: true }, { focus: 30, break: 7 });
   assert.strictEqual(focusDone.focusDelta, 1);
   assert.strictEqual(focusDone.sessionDelta, 1);
   assert.strictEqual(focusDone.completedMode, 'focus');
   assert.strictEqual(focusDone.pomodoro.mode, 'break');
-  assert.strictEqual(focusDone.pomodoro.left, 300);
+  assert.strictEqual(focusDone.pomodoro.left, 420);
 
-  const breakDone = stateUtils.tickPomodoro({ mode: 'break', left: 1, running: true });
+  const breakDone = stateUtils.tickPomodoro({ mode: 'break', left: 1, running: true }, { focus: 30, break: 7 });
   assert.strictEqual(breakDone.focusDelta, 0);
   assert.strictEqual(breakDone.sessionDelta, 0);
   assert.strictEqual(breakDone.completedMode, 'break');
   assert.strictEqual(breakDone.pomodoro.mode, 'focus');
-  assert.strictEqual(breakDone.pomodoro.left, 1500);
+  assert.strictEqual(breakDone.pomodoro.left, 1800);
 }
 
 function run() {

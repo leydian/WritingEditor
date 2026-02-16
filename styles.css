@@ -209,6 +209,29 @@ input { width: min(220px, 100%); }
 .timer-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 #timer-display { font-size: 24px; font-weight: 700; }
 
+.timer-config {
+  display: grid;
+  grid-template-columns: auto minmax(64px, 84px) auto minmax(64px, 84px) auto;
+  gap: 6px;
+  align-items: center;
+}
+
+.timer-config label {
+  font-size: 12px;
+  color: var(--text-soft);
+}
+
+.timer-config input {
+  width: 100%;
+  min-height: 30px;
+  padding: 4px 8px;
+}
+
+.timer-config #pomodoro-apply {
+  min-height: 30px;
+  padding: 4px 10px;
+}
+
 .stats-panel .stats-row {
   flex-direction: column;
   padding: 0 0 10px;
