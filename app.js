@@ -1390,18 +1390,45 @@ function exportPdf() {
   if (!d) return;
 
   const w = window.open('', '_blank');
-  if (!w) return;
+  if (!w) {
+    alert('내보내기 창을 열 수 없습니다. 브라우저 팝업 차단을 해제한 뒤 다시 시도하세요.');
+    return;
+  }
 
   w.document.write(`<html><head><title>${d.name}</title></head><body><h1>${d.name}</h1><pre style="white-space:pre-wrap;font-family:sans-serif;">${d.content.replace(/</g, '&lt;')}</pre></body></html>`);
   w.document.close();
-  w.print();
+  // Mobile browsers often block or ignore immediate print; keep manual print as fallback.
+  setTimeout(() => {
+    try {
+      w.focus();
+      w.print();
+    } catch (_error) {
+      // noop
+    }
+  }, 50);
 }
 
 function downloadBlob(blob, name) {
+  const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
+  const ua = (navigator.userAgent || '').toLowerCase();
+  const isIOS = /iphone|ipad|ipod/.test(ua);
+
+  a.href = url;
   a.download = name;
-  a.click();
+  a.rel = 'noopener';
+  a.target = '_blank';
+  document.body.appendChild(a);
+
+  // iOS Safari may ignore download attribute for blob URLs. Open a new tab fallback.
+  if (isIOS) {
+    window.open(url, '_blank');
+  } else {
+    a.click();
+  }
+
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
 }
 
 function renderHistory() {
