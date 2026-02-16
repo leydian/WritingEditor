@@ -166,7 +166,7 @@ body {
   justify-content: space-between;
   gap: 8px;
   padding: 10px 12px;
-  background: linear-gradient(180deg, rgba(13, 21, 38, .9) 0%, rgba(13, 21, 36, .85) 100%);
+  background: linear-gradient(180deg, rgba(36, 44, 45, .92) 0%, rgba(31, 38, 39, .88) 100%);
   border-bottom: 1px solid rgba(126, 210, 156, .24);
   box-shadow: var(--shadow-sm);
   flex-wrap: wrap;
@@ -593,7 +593,7 @@ textarea:focus { outline: none; }
     margin: 8px;
     border-radius: 14px;
     border: 1px solid #445253;
-    background: rgba(15, 23, 42, .84);
+    background: rgba(34, 42, 43, .86);
     backdrop-filter: blur(8px);
     box-shadow: 0 10px 28px rgba(2, 8, 23, .3);
     padding: 9px 10px;
@@ -708,8 +708,8 @@ textarea:focus { outline: none; }
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid #64748b;
-    background: linear-gradient(180deg, #2d3e58 0%, #1f2f45 100%);
+    border: 1px solid #6a787a;
+    background: linear-gradient(180deg, #4f5f61 0%, #3e4d4e 100%);
     opacity: .96;
     font-size: 13px;
     color: #e2e8f0;

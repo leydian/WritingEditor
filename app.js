@@ -920,7 +920,7 @@ function applyAuthState(user) {
   if (user) {
     gate.classList.add('hidden');
     app.style.display = 'grid';
-    $('user-email').textContent = user.email || '';
+    $('user-email').textContent = isAnonymousUser(user) ? '익명로그인' : (user.email || '');
     $('auth-status').textContent = '로그인됨';
     if (logoutBtn) {
       const isAnon = isAnonymousUser(user);
