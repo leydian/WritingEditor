@@ -1907,11 +1907,14 @@ function updateGoalLockUI() {
 
 function renderCalendar() {
   const box = $('calendar');
+  const period = $('calendar-period');
   box.innerHTML = '';
 
   const now = seoulDateParts();
   const y = now.year;
   const m = now.month;
+  const today = now.day;
+  if (period) period.textContent = `${y}년 ${m}월`;
   const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
 
   for (let d = 1; d <= last; d += 1) {
@@ -1924,7 +1927,8 @@ function renderCalendar() {
     const actualForGoal = getActualByGoalMetric(actualWithSpaces, actualNoSpaces, goalMetric);
     const achieved = target > 0 && actualForGoal >= target;
     const el = document.createElement('div');
-    el.className = `day ${achieved ? 'hit' : ''}`;
+    const isToday = d === today;
+    el.className = `day ${achieved ? 'hit' : ''} ${isToday ? 'today' : ''}`.trim();
     el.textContent = d;
     el.title = `${key}\n기준: ${goalMetric === 'noSpaces' ? '공백 제외' : '공백 포함'}\n목표 글자수: ${formatNumber(target)}\n실제 달성(공백 포함): ${formatNumber(actualWithSpaces)}\n실제 달성(공백 제외): ${formatNumber(actualNoSpaces)}`;
     box.appendChild(el);

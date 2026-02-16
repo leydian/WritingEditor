@@ -108,6 +108,12 @@ body {
   width: 100%;
 }
 
+.sidebar-menu .pill {
+  display: flex;
+  justify-content: center;
+  text-align: center;
+}
+
 .sidebar-menu #toggle-sidebar-toolbar-btn,
 .sidebar-menu #toggle-calendar-toolbar-btn {
   display: inline-flex;
@@ -525,6 +531,13 @@ textarea:focus { outline: none; }
 }
 
 .day.hit::after { content: '●'; color: var(--accent-2); display: block; font-size: 11px; }
+
+.day.today {
+  border-color: #f59e0b;
+  box-shadow: inset 0 0 0 1px rgba(245, 158, 11, .42), 0 0 0 1px rgba(245, 158, 11, .2);
+  background: linear-gradient(180deg, rgba(71, 57, 30, .95) 0%, rgba(51, 40, 24, .95) 100%);
+  font-weight: 700;
+}
 
 .pill {
   padding: 6px 10px;
