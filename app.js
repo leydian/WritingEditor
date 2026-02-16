@@ -1575,6 +1575,39 @@ async function deleteOwnAccountImmediately() {
   return supabase.rpc('delete_my_account_rpc_v3');
 }
 
+function isJwtExpiredError(errorLike) {
+  const msg = String((errorLike && errorLike.message) || errorLike || '').toLowerCase();
+  return msg.includes('jwt') && msg.includes('expired');
+}
+
+async function ensureFreshAuthSession() {
+  if (!supabase || !supabase.auth || typeof supabase.auth.getSession !== 'function') {
+    return { ok: false, message: '세션 확인 기능을 사용할 수 없습니다.' };
+  }
+
+  const sessionResult = await supabase.auth.getSession();
+  if (sessionResult && sessionResult.error) {
+    return { ok: false, message: sessionResult.error.message || '세션 확인 실패' };
+  }
+
+  let session = sessionResult && sessionResult.data ? sessionResult.data.session : null;
+  if (!session) return { ok: false, message: '로그인 세션이 없습니다.' };
+
+  const expiresAtSec = Number(session.expires_at || 0);
+  const shouldRefresh = !expiresAtSec || ((expiresAtSec * 1000) - Date.now() < 60 * 1000);
+  if (shouldRefresh && typeof supabase.auth.refreshSession === 'function') {
+    const refreshResult = await supabase.auth.refreshSession();
+    if (refreshResult && refreshResult.error) {
+      return { ok: false, message: refreshResult.error.message || '세션 갱신 실패' };
+    }
+    session = refreshResult && refreshResult.data ? refreshResult.data.session : session;
+  }
+
+  const user = session && session.user ? session.user : null;
+  if (!user || !user.id) return { ok: false, message: '세션 사용자 확인 실패' };
+  return { ok: true, user };
+}
+
 async function executeAccountDeletionFlow(user, options = {}) {
   if (!user || !user.id) {
     setAuthStatus('삭제 대상 사용자 확인에 실패했습니다.');
@@ -1585,14 +1618,26 @@ async function executeAccountDeletionFlow(user, options = {}) {
   setAuthStatus('회원 탈퇴 처리 중... 절대 창을 닫지 마세요.');
   setSyncStatus('회원 탈퇴 처리 중…', 'pending');
 
-  const deletedState = await deleteRemoteStateImmediately(user.id);
+  let deletedState = await deleteRemoteStateImmediately(user.id);
+  if (deletedState && deletedState.error && isJwtExpiredError(deletedState.error)) {
+    const fresh = await ensureFreshAuthSession();
+    if (fresh.ok) {
+      deletedState = await deleteRemoteStateImmediately(user.id);
+    }
+  }
   if (deletedState && deletedState.error) {
     setSyncStatus(`탈퇴 실패: ${deletedState.error.message}`, 'error');
     setAuthStatus(`탈퇴 실패(데이터 삭제): ${deletedState.error.message}`);
     return false;
   }
 
-  const deletedAccount = await deleteOwnAccountImmediately();
+  let deletedAccount = await deleteOwnAccountImmediately();
+  if (deletedAccount && deletedAccount.error && isJwtExpiredError(deletedAccount.error)) {
+    const fresh = await ensureFreshAuthSession();
+    if (fresh.ok) {
+      deletedAccount = await deleteOwnAccountImmediately();
+    }
+  }
   if (deletedAccount && deletedAccount.error) {
     setSyncStatus(`탈퇴 실패: ${deletedAccount.error.message}`, 'error');
     setAuthStatus(`탈퇴 실패(계정 삭제): ${deletedAccount.error.message}`);
@@ -1664,6 +1709,13 @@ async function authWithdraw() {
       setSyncStatus('탈퇴 중단: 계정 불일치', 'error');
       return;
     }
+    const fresh = await ensureFreshAuthSession();
+    if (!fresh.ok) {
+      setAuthStatus(`재로그인 후 세션 갱신 실패: ${fresh.message}`);
+      setSyncStatus('탈퇴 중단: 세션 갱신 실패', 'error');
+      return;
+    }
+    confirmedUser = fresh.user;
   } else if (!confirmedUser || !confirmedUser.id) {
     setAuthStatus('익명 세션이 만료되어 탈퇴를 진행할 수 없습니다. 다시 시작해 주세요.');
     setSyncStatus('탈퇴 중단: 세션 만료', 'error');
