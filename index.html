@@ -30,8 +30,8 @@
   <div id="app" class="app">
     <aside id="sidebar" class="sidebar">
       <div class="sidebar-header">
-        <h1>문서 트리</h1>
-        <button id="toggle-tree-btn" class="panel-icon-btn" type="button" title="문서트리 숨기기" aria-label="문서트리 숨기기">◀</button>
+        <h1>문서 목록</h1>
+        <button id="toggle-tree-btn" class="panel-icon-btn" type="button" title="문서 목록 숨기기" aria-label="문서 목록 숨기기">◀</button>
       </div>
       <div id="tree" class="tree"></div>
     </aside>
@@ -47,7 +47,7 @@
         </div>
         <div class="right-tools">
           <span id="user-email" class="pill"></span>
-          <button id="toggle-sidebar-toolbar-btn" type="button">문서트리 보이기</button>
+          <button id="toggle-sidebar-toolbar-btn" type="button">문서 목록 보이기</button>
           <button id="toggle-calendar-toolbar-btn" type="button">달력 보이기</button>
           <button id="logout-btn">로그아웃</button>
           <button id="upgrade-account-btn" class="hidden">회원가입</button>
@@ -81,7 +81,7 @@
       <section class="stats-row">
         <div class="timer-box">
           <div class="timer-head">
-            <strong>Pomodoro</strong>
+            <strong>뽀모도로</strong>
             <button id="toggle-calendar-btn" class="panel-icon-btn" type="button" title="달력 숨기기" aria-label="달력 숨기기">▶</button>
           </div>
           <span id="timer-label">집중</span>
@@ -100,15 +100,15 @@
         </div>
       </section>
       <div class="stats-panel-header">
-        <h2>달력 달성</h2>
+        <h2>달성 기록</h2>
       </div>
       <div class="calendar-tools">
         <input id="goal-input" type="number" min="0" placeholder="오늘 목표 글자 수" />
         <label class="goal-metric-check" for="goal-no-spaces-check">
           <input id="goal-no-spaces-check" type="checkbox" />
-          공백 제외로 목표 체크
+          공백 제외
         </label>
-        <button id="goal-lock-btn" type="button">오늘 목표 고정</button>
+        <button id="goal-lock-btn" type="button">목표 고정</button>
         <span id="progress-pill" class="pill">0 / 0</span>
       </div>
       <div class="calendar-view-toggle">
@@ -123,7 +123,7 @@
     </aside>
   </div>
 
-  <button id="show-tree-bar" class="edge-bar left hidden" type="button" title="문서트리 보이기" aria-label="문서트리 보이기"></button>
+  <button id="show-tree-bar" class="edge-bar left hidden" type="button" title="문서 목록 보이기" aria-label="문서 목록 보이기"></button>
   <button id="show-calendar-bar" class="edge-bar right hidden" type="button" title="달력 보이기" aria-label="달력 보이기"></button>
 
   <dialog id="history-dialog">
@@ -171,7 +171,7 @@
 
   <script src="state-utils.js?v=1"></script>
   <script src="error-utils.js?v=1"></script>
-  <script src="app.js?v=68"></script>
+  <script src="app.js?v=69"></script>
 </body>
 </html>
 

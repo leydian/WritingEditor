@@ -969,8 +969,8 @@ function renderTree() {
     });
   };
 
-  tree.appendChild(mk(' + 문서 생성', '', () => createDoc(null), [], null, null));
-  tree.appendChild(mk(' + 폴더 생성', '', () => createFolder(null), [], null, null));
+  tree.appendChild(mk(' 📄 새 문서 생성', '', () => createDoc(null), [], null, null));
+  tree.appendChild(mk(' 📁 새 폴더 생성', '', () => createFolder(null), [], null, null));
   renderBranch(null, tree);
 }
 
@@ -1437,7 +1437,7 @@ function updateGoalLockUI() {
   const locked = isTodayGoalLocked();
   goalInput.classList.toggle('hidden', locked);
   if (goalNoSpacesCheck) goalNoSpacesCheck.disabled = locked;
-  lockBtn.textContent = locked ? '오늘 목표 고정 해제' : '오늘 목표 고정';
+  lockBtn.textContent = locked ? '목표 고정 해제' : '목표 고정';
   lockBtn.title = locked ? '오늘 목표 글자수 고정을 해제합니다.' : '오늘 목표 글자수를 고정합니다.';
 }
 
@@ -2105,12 +2105,12 @@ function updatePanelToggleButtons() {
   if (treeBtn) {
     if (isMobileMini) {
       treeBtn.textContent = '✕';
-      treeBtn.title = '문서트리 닫기';
-      treeBtn.setAttribute('aria-label', '문서트리 닫기');
+      treeBtn.title = '문서 목록 닫기';
+      treeBtn.setAttribute('aria-label', '문서 목록 닫기');
     } else {
       treeBtn.textContent = '◀';
-      treeBtn.title = '문서트리 숨기기';
-      treeBtn.setAttribute('aria-label', '문서트리 숨기기');
+      treeBtn.title = '문서 목록 숨기기';
+      treeBtn.setAttribute('aria-label', '문서 목록 숨기기');
     }
   }
   if (calendarBtn) {
@@ -2120,7 +2120,7 @@ function updatePanelToggleButtons() {
   }
   if (sidebarToolbarBtn) {
     if (isMobileMini) sidebarToolbarBtn.textContent = showSidebar ? '문서목록 닫기' : '문서목록';
-    else sidebarToolbarBtn.textContent = showSidebar ? '문서트리 숨기기' : '문서트리 보이기';
+    else sidebarToolbarBtn.textContent = showSidebar ? '문서 목록 숨기기' : '문서 목록 보이기';
   }
   if (calendarToolbarBtn) {
     if (isMobileMini) {
@@ -2164,8 +2164,8 @@ function applyAppLayout() {
   statsPanel.classList.toggle('hidden-panel', !showCalendar);
   if (showTreeBar) {
     showTreeBar.classList.toggle('hidden', isMobileMini || showSidebar);
-    showTreeBar.setAttribute('aria-label', isMobileMini ? '문서 목록 열기' : '문서트리 보이기');
-    showTreeBar.title = isMobileMini ? '문서 목록 열기' : '문서트리 보이기';
+    showTreeBar.setAttribute('aria-label', isMobileMini ? '문서 목록 열기' : '문서 목록 보이기');
+    showTreeBar.title = isMobileMini ? '문서 목록 열기' : '문서 목록 보이기';
   }
   if (showCalendarBar) showCalendarBar.classList.toggle('hidden', isMobileMini || showCalendar || isCompact);
 
