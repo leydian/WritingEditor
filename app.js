@@ -53,6 +53,7 @@ let showWithdrawOnAuthGate = false;
 let mobileMiniSidebarOpen = false;
 let mobileMiniCalendarOpen = false;
 let calendarViewMode = 'calendar';
+let editorSplitDragging = false;
 const dirtyDocIds = new Set();
 const layoutPrefs = loadLayoutPrefs();
 
@@ -106,6 +107,10 @@ function defaultState() {
     sessionsByDate: {},
     focusSecondsByDate: {},
     historyEntries: [],
+    splitRatioByMode: {
+      vertical: 50,
+      horizontal: 50,
+    },
     pomodoro: { mode: 'focus', left: 25 * 60, running: false },
   };
 }
@@ -130,6 +135,16 @@ function normalizeState(raw) {
   if (Object.prototype.hasOwnProperty.call(merged, 'historyByDoc')) delete merged.historyByDoc;
   if (!merged.sessionsByDate || typeof merged.sessionsByDate !== 'object') merged.sessionsByDate = {};
   if (!merged.focusSecondsByDate || typeof merged.focusSecondsByDate !== 'object') merged.focusSecondsByDate = {};
+  if (!merged.splitRatioByMode || typeof merged.splitRatioByMode !== 'object') {
+    merged.splitRatioByMode = { ...base.splitRatioByMode };
+  }
+  const clampRatio = (n) => {
+    const x = Number(n);
+    if (!Number.isFinite(x)) return 50;
+    return Math.max(20, Math.min(80, x));
+  };
+  merged.splitRatioByMode.vertical = clampRatio(merged.splitRatioByMode.vertical);
+  merged.splitRatioByMode.horizontal = clampRatio(merged.splitRatioByMode.horizontal);
   merged.folders = merged.folders.map((f) => ({
     ...f,
     parentFolderId: f && typeof f.parentFolderId !== 'undefined' ? f.parentFolderId : null,
@@ -1243,8 +1258,12 @@ function renderEditors() {
   $('editor-b').value = b && typeof b.content === 'string' ? b.content : '';
 
   const area = $('editor-area');
+  const splitResizer = $('editor-split-resizer');
   area.className = `editor-area ${state.split}`;
-  $('pane-b').classList.toggle('hidden', state.split === 'single');
+  const isSingle = state.split === 'single';
+  $('pane-b').classList.toggle('hidden', isSingle);
+  if (splitResizer) splitResizer.classList.toggle('hidden', isSingle);
+  applyEditorSplitLayout();
 
   const renderPaneHead = (paneId, title, pane) => {
     const head = $(paneId).querySelector('.pane-head');
@@ -1266,6 +1285,97 @@ function renderEditors() {
 
   renderPaneHead('pane-a', `왼쪽: ${a && a.name ? a.name : '-'}`, 'a');
   renderPaneHead('pane-b', `오른쪽/아래: ${b && b.name ? b.name : '-'}`, 'b');
+}
+
+function getSplitRatio(mode = state.split) {
+  const byMode = state.splitRatioByMode && typeof state.splitRatioByMode === 'object'
+    ? state.splitRatioByMode
+    : {};
+  const raw = Number(byMode[mode]);
+  if (!Number.isFinite(raw)) return 50;
+  return Math.max(20, Math.min(80, raw));
+}
+
+function setSplitRatio(mode, ratio) {
+  if (!state.splitRatioByMode || typeof state.splitRatioByMode !== 'object') {
+    state.splitRatioByMode = { vertical: 50, horizontal: 50 };
+  }
+  state.splitRatioByMode[mode] = Math.max(20, Math.min(80, Number(ratio) || 50));
+}
+
+function applyEditorSplitLayout() {
+  const area = $('editor-area');
+  const splitResizer = $('editor-split-resizer');
+  if (!area) return;
+  area.style.gridTemplateColumns = '';
+  area.style.gridTemplateRows = '';
+  const forceSingleByViewport = window.innerWidth <= MOBILE_MINI_BREAKPOINT;
+  if (splitResizer) splitResizer.classList.toggle('hidden', state.split === 'single' || forceSingleByViewport);
+  if (forceSingleByViewport) {
+    area.style.gridTemplateColumns = '1fr';
+    area.style.gridTemplateRows = '1fr';
+    return;
+  }
+  if (state.split === 'vertical') {
+    const ratio = getSplitRatio('vertical');
+    area.style.gridTemplateColumns = `minmax(220px, ${ratio}%) 8px minmax(220px, ${100 - ratio}%)`;
+    area.style.gridTemplateRows = '1fr';
+  } else if (state.split === 'horizontal') {
+    const ratio = getSplitRatio('horizontal');
+    area.style.gridTemplateColumns = '1fr';
+    area.style.gridTemplateRows = `minmax(180px, ${ratio}%) 8px minmax(180px, ${100 - ratio}%)`;
+  } else {
+    area.style.gridTemplateColumns = '1fr';
+    area.style.gridTemplateRows = '1fr';
+  }
+}
+
+function bindEditorSplitResize() {
+  const splitResizer = $('editor-split-resizer');
+  const area = $('editor-area');
+  if (!splitResizer || !area) return;
+
+  let draggingMode = null;
+
+  const onPointerMove = (e) => {
+    if (!editorSplitDragging || !draggingMode) return;
+    const rect = area.getBoundingClientRect();
+    if (draggingMode === 'vertical') {
+      const ratio = ((e.clientX - rect.left) / Math.max(1, rect.width)) * 100;
+      setSplitRatio('vertical', ratio);
+    } else if (draggingMode === 'horizontal') {
+      const ratio = ((e.clientY - rect.top) / Math.max(1, rect.height)) * 100;
+      setSplitRatio('horizontal', ratio);
+    }
+    applyEditorSplitLayout();
+  };
+
+  const onPointerUp = () => {
+    if (!editorSplitDragging) return;
+    editorSplitDragging = false;
+    draggingMode = null;
+    document.body.style.userSelect = '';
+    saveState();
+  };
+
+  splitResizer.addEventListener('pointerdown', (e) => {
+    if (window.innerWidth <= MOBILE_MINI_BREAKPOINT) return;
+    if (state.split !== 'vertical' && state.split !== 'horizontal') return;
+    e.preventDefault();
+    editorSplitDragging = true;
+    draggingMode = state.split;
+    document.body.style.userSelect = 'none';
+    try {
+      splitResizer.setPointerCapture(e.pointerId);
+    } catch (_error) {
+      // noop
+    }
+  });
+
+  window.addEventListener('pointermove', onPointerMove);
+  window.addEventListener('pointerup', onPointerUp);
+  window.addEventListener('pointercancel', onPointerUp);
+  window.addEventListener('resize', applyEditorSplitLayout);
 }
 
 function updateProgress() {
@@ -2366,6 +2476,7 @@ async function init() {
     if ($('sb-anon')) $('sb-anon').value = config && config.anon ? config.anon : '';
 
     bindEvents();
+    bindEditorSplitResize();
     bindSidebarResize();
     ensureHistoryAutoSaveInterval();
     renderAll();

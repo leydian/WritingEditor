@@ -9,6 +9,7 @@ function testNormalizeState() {
     folders: [],
     split: 'weird',
     historyByDoc: { legacy: true },
+    splitRatioByMode: { vertical: 5, horizontal: 95 },
     pomodoro: { mode: 'bad', left: 0, running: 'yes' },
   });
 
@@ -20,6 +21,8 @@ function testNormalizeState() {
   assert.strictEqual(normalized.pomodoro.mode, 'focus');
   assert.strictEqual(normalized.pomodoro.left, 1500);
   assert.strictEqual(normalized.pomodoro.running, true);
+  assert.strictEqual(normalized.splitRatioByMode.vertical, 20);
+  assert.strictEqual(normalized.splitRatioByMode.horizontal, 80);
 }
 
 function testHistoryHelpers() {

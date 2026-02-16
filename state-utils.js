@@ -21,6 +21,10 @@
       sessionsByDate: {},
       focusSecondsByDate: {},
       historyEntries: [],
+      splitRatioByMode: {
+        vertical: 50,
+        horizontal: 50,
+      },
       pomodoro: { mode: 'focus', left: 25 * 60, running: false },
     };
   }
@@ -43,6 +47,16 @@
     if (Object.prototype.hasOwnProperty.call(merged, 'historyByDoc')) delete merged.historyByDoc;
     if (!merged.sessionsByDate || typeof merged.sessionsByDate !== 'object') merged.sessionsByDate = {};
     if (!merged.focusSecondsByDate || typeof merged.focusSecondsByDate !== 'object') merged.focusSecondsByDate = {};
+    if (!merged.splitRatioByMode || typeof merged.splitRatioByMode !== 'object') {
+      merged.splitRatioByMode = { ...base.splitRatioByMode };
+    }
+    const clampRatio = (n) => {
+      const x = Number(n);
+      if (!Number.isFinite(x)) return 50;
+      return Math.max(20, Math.min(80, x));
+    };
+    merged.splitRatioByMode.vertical = clampRatio(merged.splitRatioByMode.vertical);
+    merged.splitRatioByMode.horizontal = clampRatio(merged.splitRatioByMode.horizontal);
     merged.folders = merged.folders.map((f) => ({
       ...f,
       parentFolderId: f && typeof f.parentFolderId !== 'undefined' ? f.parentFolderId : null,
