@@ -1428,8 +1428,28 @@ function exportPdf() {
     return;
   }
 
-  w.document.write(`<html><head><title>${d.name}</title></head><body><h1>${d.name}</h1><pre style="white-space:pre-wrap;font-family:sans-serif;">${d.content.replace(/</g, '&lt;')}</pre></body></html>`);
-  w.document.close();
+  const doc = w.document;
+  doc.open();
+  doc.write('<!doctype html><html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title></title></head><body></body></html>');
+  doc.close();
+
+  try {
+    if (w.opener) w.opener = null;
+  } catch (_error) {
+    // noop
+  }
+
+  const safeName = String(d.name || '문서');
+  doc.title = safeName;
+
+  const title = doc.createElement('h1');
+  title.textContent = safeName;
+  const content = doc.createElement('pre');
+  content.style.whiteSpace = 'pre-wrap';
+  content.style.fontFamily = 'sans-serif';
+  content.textContent = String(d.content || '');
+  doc.body.appendChild(title);
+  doc.body.appendChild(content);
   // Mobile browsers often block or ignore immediate print; keep manual print as fallback.
   setTimeout(() => {
     try {
