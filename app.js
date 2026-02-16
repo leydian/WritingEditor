@@ -99,6 +99,7 @@ function defaultState() {
     split: 'single',
     goalByDate: {},
     goalLockedByDate: {},
+    goalMetricByDate: {},
     progressByDate: {},
     sessionsByDate: {},
     focusSecondsByDate: {},
@@ -121,6 +122,7 @@ function normalizeState(raw) {
   if (!Array.isArray(merged.folders)) merged.folders = [];
   if (!Array.isArray(merged.historyEntries)) merged.historyEntries = [];
   if (!merged.goalLockedByDate || typeof merged.goalLockedByDate !== 'object') merged.goalLockedByDate = {};
+  if (!merged.goalMetricByDate || typeof merged.goalMetricByDate !== 'object') merged.goalMetricByDate = {};
   // Drop deprecated state key from older snapshots.
   if (Object.prototype.hasOwnProperty.call(merged, 'historyByDoc')) delete merged.historyByDoc;
   if (!merged.sessionsByDate || typeof merged.sessionsByDate !== 'object') merged.sessionsByDate = {};
@@ -1265,16 +1267,20 @@ function updateProgress() {
   const actualNoSpaces = text.replace(/\s/g, '').length;
   const date = todayKey();
   const target = Number(state.goalByDate[date] || 0);
+  const goalMetric = getGoalMetric(date);
+  const actualForGoal = getActualByGoalMetric(actualWithSpaces, actualNoSpaces, goalMetric);
   const focusSec = Number(state.focusSecondsByDate[date] || 0);
 
   state.progressByDate[date] = {
     actualChars: actualWithSpaces,
     actualCharsNoSpaces: actualNoSpaces,
     targetChars: target,
-    goalAchieved: target > 0 && actualWithSpaces >= target,
+    goalMetric,
+    goalAchieved: target > 0 && actualForGoal >= target,
   };
 
-  $('progress-pill').textContent = `${actualWithSpaces} / ${target}`;
+  const metricLabel = goalMetric === 'noSpaces' ? '공백 제외' : '공백 포함';
+  $('progress-pill').textContent = `${actualForGoal} / ${target} (${metricLabel})`;
   $('daily-stats').textContent = `공백 포함: ${actualWithSpaces}\n공백 제외: ${actualNoSpaces}\n집중 횟수: ${state.sessionsByDate[date] || 0}\n집중 시간: ${formatDuration(focusSec)}`;
   renderCalendar();
   renderCalendarTable();
@@ -1293,12 +1299,22 @@ function isTodayGoalLocked() {
   return !!state.goalLockedByDate[todayKey()];
 }
 
+function getGoalMetric(dateKey = todayKey()) {
+  return state.goalMetricByDate[dateKey] === 'noSpaces' ? 'noSpaces' : 'withSpaces';
+}
+
+function getActualByGoalMetric(actualWithSpaces, actualNoSpaces, metric) {
+  return metric === 'noSpaces' ? actualNoSpaces : actualWithSpaces;
+}
+
 function updateGoalLockUI() {
   const lockBtn = $('goal-lock-btn');
   const goalInput = $('goal-input');
+  const goalMetricSelect = $('goal-metric-select');
   if (!lockBtn || !goalInput) return;
   const locked = isTodayGoalLocked();
-  goalInput.disabled = locked;
+  goalInput.classList.toggle('hidden', locked);
+  if (goalMetricSelect) goalMetricSelect.disabled = locked;
   lockBtn.textContent = locked ? '오늘 목표 고정 해제' : '오늘 목표 고정';
   lockBtn.title = locked ? '오늘 목표 글자수 고정을 해제합니다.' : '오늘 목표 글자수를 고정합니다.';
 }
@@ -1316,12 +1332,15 @@ function renderCalendar() {
     const key = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
     const rec = state.progressByDate[key];
     const target = Number((rec && rec.targetChars) || state.goalByDate[key] || 0);
+    const goalMetric = (rec && rec.goalMetric) || getGoalMetric(key);
     const actualWithSpaces = Number((rec && rec.actualChars) || 0);
     const actualNoSpaces = Number((rec && rec.actualCharsNoSpaces) || 0);
+    const actualForGoal = getActualByGoalMetric(actualWithSpaces, actualNoSpaces, goalMetric);
+    const achieved = target > 0 && actualForGoal >= target;
     const el = document.createElement('div');
-    el.className = `day ${rec && rec.goalAchieved ? 'hit' : ''}`;
+    el.className = `day ${achieved ? 'hit' : ''}`;
     el.textContent = d;
-    el.title = `${key}\n목표 글자수: ${target}\n실제 달성(공백 포함): ${actualWithSpaces}\n실제 달성(공백 제외): ${actualNoSpaces}`;
+    el.title = `${key}\n기준: ${goalMetric === 'noSpaces' ? '공백 제외' : '공백 포함'}\n목표 글자수: ${target}\n실제 달성(공백 포함): ${actualWithSpaces}\n실제 달성(공백 제외): ${actualNoSpaces}`;
     box.appendChild(el);
   }
 }
@@ -1332,7 +1351,7 @@ function renderCalendarTable() {
   table.innerHTML = '';
 
   const thead = document.createElement('thead');
-  thead.innerHTML = '<tr><th>날짜</th><th>목표</th><th>공백 포함</th><th>공백 제외</th><th>달성</th></tr>';
+  thead.innerHTML = '<tr><th>날짜</th><th>기준</th><th>목표</th><th>공백 포함</th><th>공백 제외</th><th>달성</th></tr>';
   table.appendChild(thead);
 
   const tbody = document.createElement('tbody');
@@ -1345,11 +1364,13 @@ function renderCalendarTable() {
     const key = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
     const rec = state.progressByDate[key];
     const target = Number((rec && rec.targetChars) || state.goalByDate[key] || 0);
+    const goalMetric = (rec && rec.goalMetric) || getGoalMetric(key);
     const actualWithSpaces = Number((rec && rec.actualChars) || 0);
     const actualNoSpaces = Number((rec && rec.actualCharsNoSpaces) || 0);
-    const achieved = target > 0 && actualWithSpaces >= target;
+    const actualForGoal = getActualByGoalMetric(actualWithSpaces, actualNoSpaces, goalMetric);
+    const achieved = target > 0 && actualForGoal >= target;
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${key}</td><td>${target}</td><td>${actualWithSpaces}</td><td>${actualNoSpaces}</td><td>${achieved ? '달성' : '-'}</td>`;
+    tr.innerHTML = `<td>${key}</td><td>${goalMetric === 'noSpaces' ? '공백 제외' : '공백 포함'}</td><td>${target}</td><td>${actualWithSpaces}</td><td>${actualNoSpaces}</td><td>${achieved ? '달성' : '-'}</td>`;
     tbody.appendChild(tr);
   }
   table.appendChild(tbody);
@@ -1521,6 +1542,7 @@ function renderAll() {
   renderTimer();
   updateProgress();
   $('goal-input').value = state.goalByDate[todayKey()] || '';
+  if ($('goal-metric-select')) $('goal-metric-select').value = getGoalMetric(todayKey());
   updateGoalLockUI();
   setCalendarViewMode(calendarViewMode);
 }
@@ -1977,6 +1999,7 @@ function bindEvents() {
   const editorA = $('editor-a');
   const editorB = $('editor-b');
   const goalInput = $('goal-input');
+  const goalMetricSelect = $('goal-metric-select');
   const goalLockBtn = $('goal-lock-btn');
   const calendarViewBtn = $('calendar-view-btn');
   const calendarTableViewBtn = $('calendar-table-view-btn');
@@ -2085,6 +2108,15 @@ function bindEvents() {
       return;
     }
     state.goalByDate[todayKey()] = Number(e.target.value || 0);
+    saveState();
+    updateProgress();
+  });
+  if (goalMetricSelect) goalMetricSelect.addEventListener('change', (e) => {
+    if (isTodayGoalLocked()) {
+      e.target.value = getGoalMetric(todayKey());
+      return;
+    }
+    state.goalMetricByDate[todayKey()] = e.target.value === 'noSpaces' ? 'noSpaces' : 'withSpaces';
     saveState();
     updateProgress();
   });
