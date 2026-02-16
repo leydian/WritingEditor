@@ -539,6 +539,20 @@ textarea:focus { outline: none; }
 
 .day.hit::after { content: '●'; color: var(--accent-2); display: block; font-size: 11px; }
 
+.day.weekday {
+  font-weight: 700;
+  background: linear-gradient(180deg, rgba(52, 65, 66, .98) 0%, rgba(42, 53, 54, .98) 100%);
+}
+
+.day.weekday.sun { color: #fca5a5; }
+.day.weekday.sat { color: #93c5fd; }
+
+.day.empty {
+  background: transparent;
+  border-style: dashed;
+  border-color: rgba(126, 210, 156, .1);
+}
+
 .day.today {
   border-color: #f59e0b;
   box-shadow: inset 0 0 0 1px rgba(245, 158, 11, .42), 0 0 0 1px rgba(245, 158, 11, .2);

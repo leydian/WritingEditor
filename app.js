@@ -11,6 +11,7 @@ const AUTO_SYNC_RETRY_MAX = 3;
 const HISTORY_AUTO_SAVE_MS = 10 * 60 * 1000;
 const COMMAND_PALETTE_RECENT_LIMIT = 8;
 const SUPABASE_SDK_URLS = [
+  'vendor/supabase.js',
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js',
   'https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js',
 ];
@@ -1936,6 +1937,20 @@ function renderCalendar() {
   const m = calendarCursor.month;
   const today = todayKey();
   if (period) period.textContent = `${y}년 ${m}월`;
+  const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
+  weekdays.forEach((label, idx) => {
+    const wd = document.createElement('div');
+    wd.className = `day weekday ${idx === 0 ? 'sun' : ''} ${idx === 6 ? 'sat' : ''}`.trim();
+    wd.textContent = label;
+    box.appendChild(wd);
+  });
+  const firstWeekday = new Date(Date.UTC(y, m - 1, 1)).getUTCDay();
+  for (let i = 0; i < firstWeekday; i += 1) {
+    const empty = document.createElement('div');
+    empty.className = 'day empty';
+    empty.setAttribute('aria-hidden', 'true');
+    box.appendChild(empty);
+  }
   const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
 
   for (let d = 1; d <= last; d += 1) {
