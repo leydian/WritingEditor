@@ -164,6 +164,9 @@ node .\scripts\security-preflight-check.js
 - `tests/crypto-utils.test.js`
 - `tests/error-utils.test.js`
 - `tests/state-utils.test.js`
+- `tests/auth-service.test.js`
+- `tests/auth-config-service.test.js`
+- `tests/sync-utils.test.js`
 
 검증 명령:
 
@@ -171,6 +174,9 @@ node .\scripts\security-preflight-check.js
 node .\tests\crypto-utils.test.js
 node .\tests\error-utils.test.js
 node .\tests\state-utils.test.js
+node .\tests\auth-service.test.js
+node .\tests\auth-config-service.test.js
+node .\tests\sync-utils.test.js
 node .\scripts\security-preflight-check.js
 ```
 
@@ -228,6 +234,9 @@ alter table public.editor_states enable row level security;
 node .\tests\crypto-utils.test.js
 node .\tests\error-utils.test.js
 node .\tests\state-utils.test.js
+node .\tests\auth-service.test.js
+node .\tests\auth-config-service.test.js
+node .\tests\sync-utils.test.js
 node .\scripts\security-preflight-check.js
 ```
 

@@ -26,8 +26,12 @@ const EMBEDDED_SUPABASE_URL = (typeof globalThis !== 'undefined' && globalThis._
 const EMBEDDED_SUPABASE_ANON = (typeof globalThis !== 'undefined' && globalThis.__WE_SUPABASE_ANON__)
   ? String(globalThis.__WE_SUPABASE_ANON__).trim()
   : DEFAULT_SUPABASE_ANON;
-const stateUtils = (typeof StateUtils !== 'undefined' && StateUtils) ? StateUtils : null;
+const stateApi = (typeof StateUtils !== 'undefined' && StateUtils) ? StateUtils : null;
 const cryptoUtils = (typeof CryptoUtils !== 'undefined' && CryptoUtils) ? CryptoUtils : null;
+const syncUtils = (typeof SyncUtils !== 'undefined' && SyncUtils) ? SyncUtils : null;
+const authService = (typeof AuthService !== 'undefined' && AuthService) ? AuthService : null;
+const authConfigService = (typeof AuthConfigService !== 'undefined' && AuthConfigService) ? AuthConfigService : null;
+const uiBindings = (typeof UiBindings !== 'undefined' && UiBindings) ? UiBindings : null;
 
 function seoulDateParts(date = new Date()) {
   const parts = new Intl.DateTimeFormat('en-CA', {
@@ -144,10 +148,12 @@ function saveLayoutPrefs() {
 }
 
 function defaultState() {
-  if (stateUtils) return stateUtils.defaultState();
+  if (stateApi && typeof stateApi.defaultState === 'function') {
+    return stateApi.defaultState();
+  }
   return {
     stateVersion: 2,
-    docs: [{ id: 'd1', name: '새 문서.txt', folderId: null, content: '' }],
+    docs: [{ id: 'd1', name: 'new-doc.txt', folderId: null, content: '' }],
     folders: [],
     activeDocA: 'd1',
     activeDocB: null,
@@ -175,117 +181,12 @@ function defaultState() {
 }
 
 function normalizeState(raw) {
-  if (stateUtils) return stateUtils.normalizeState(raw);
+  if (stateApi && typeof stateApi.normalizeState === 'function') {
+    return stateApi.normalizeState(raw);
+  }
   const base = defaultState();
   if (!raw || typeof raw !== 'object') return base;
-
-  const merged = {
-    ...base,
-    ...raw,
-    ui: {
-      ...base.ui,
-      ...(raw.ui || {}),
-      commandPalette: {
-        ...base.ui.commandPalette,
-        ...((raw.ui && raw.ui.commandPalette) || {}),
-      },
-    },
-    pomodoro: { ...base.pomodoro, ...(raw.pomodoro || {}) },
-  };
-
-  if (!Array.isArray(merged.docs)) merged.docs = base.docs;
-  if (!Array.isArray(merged.folders)) merged.folders = [];
-  if (!Array.isArray(merged.historyEntries)) merged.historyEntries = [];
-  merged.stateVersion = 2;
-  if (!merged.ui || typeof merged.ui !== 'object') merged.ui = { ...base.ui };
-  if (!merged.ui.commandPalette || typeof merged.ui.commandPalette !== 'object') {
-    merged.ui.commandPalette = { ...base.ui.commandPalette };
-  }
-  merged.ui.commandPalette.enabled = merged.ui.commandPalette.enabled !== false;
-  if (!Array.isArray(merged.ui.commandPalette.recentCommands)) {
-    merged.ui.commandPalette.recentCommands = [];
-  } else {
-    merged.ui.commandPalette.recentCommands = merged.ui.commandPalette.recentCommands
-      .map((x) => String(x || '').trim())
-      .filter((x) => x)
-      .slice(0, COMMAND_PALETTE_RECENT_LIMIT);
-  }
-  if (!merged.goalLockedByDate || typeof merged.goalLockedByDate !== 'object') merged.goalLockedByDate = {};
-  if (!merged.goalMetricByDate || typeof merged.goalMetricByDate !== 'object') merged.goalMetricByDate = {};
-  // Drop deprecated state key from older snapshots.
-  if (Object.prototype.hasOwnProperty.call(merged, 'historyByDoc')) delete merged.historyByDoc;
-  if (!merged.sessionsByDate || typeof merged.sessionsByDate !== 'object') merged.sessionsByDate = {};
-  if (!merged.focusSecondsByDate || typeof merged.focusSecondsByDate !== 'object') merged.focusSecondsByDate = {};
-  if (!merged.pomodoroMinutes || typeof merged.pomodoroMinutes !== 'object') {
-    merged.pomodoroMinutes = { ...base.pomodoroMinutes };
-  }
-  const clampMinutes = (value, fallback) => {
-    const n = Number(value);
-    if (!Number.isFinite(n)) return fallback;
-    return Math.max(1, Math.min(180, Math.round(n)));
-  };
-  merged.pomodoroMinutes.focus = clampMinutes(merged.pomodoroMinutes.focus, 25);
-  merged.pomodoroMinutes.break = clampMinutes(merged.pomodoroMinutes.break, 5);
-  if (!merged.splitRatioByMode || typeof merged.splitRatioByMode !== 'object') {
-    merged.splitRatioByMode = { ...base.splitRatioByMode };
-  }
-  const clampRatio = (n) => {
-    const x = Number(n);
-    if (!Number.isFinite(x)) return 50;
-    return Math.max(20, Math.min(80, x));
-  };
-  merged.splitRatioByMode.vertical = clampRatio(merged.splitRatioByMode.vertical);
-  merged.splitRatioByMode.horizontal = clampRatio(merged.splitRatioByMode.horizontal);
-  merged.folders = merged.folders.map((f) => ({
-    ...f,
-    parentFolderId: f && typeof f.parentFolderId !== 'undefined' ? f.parentFolderId : null,
-  }));
-  if (merged.docs.length === 0 && merged.folders.length === 0) {
-    merged.docs = base.docs;
-    merged.activeDocA = base.activeDocA;
-  }
-  if (merged.docs.length > 0) {
-    if (!merged.activeDocA || !merged.docs.some((d) => d.id === merged.activeDocA)) {
-      merged.activeDocA = merged.docs[0].id;
-    }
-    if (merged.activeDocB && !merged.docs.some((d) => d.id === merged.activeDocB)) {
-      merged.activeDocB = null;
-    }
-  } else {
-    merged.activeDocA = null;
-    merged.activeDocB = null;
-  }
-  if (!['single', 'vertical', 'horizontal'].includes(merged.split)) {
-    merged.split = 'single';
-  }
-  if (!merged.pomodoro || typeof merged.pomodoro !== 'object') {
-    merged.pomodoro = { ...base.pomodoro };
-  }
-  if (merged.pomodoro.mode !== 'focus' && merged.pomodoro.mode !== 'break') {
-    merged.pomodoro.mode = 'focus';
-  }
-  if (typeof merged.pomodoro.left !== 'number' || Number.isNaN(merged.pomodoro.left) || merged.pomodoro.left <= 0) {
-    merged.pomodoro.left = merged.pomodoro.mode === 'focus'
-      ? merged.pomodoroMinutes.focus * 60
-      : merged.pomodoroMinutes.break * 60;
-  }
-  merged.pomodoro.running = !!merged.pomodoro.running;
-  merged.historyEntries = merged.historyEntries.map((entry) => {
-    const next = entry && typeof entry === 'object' ? { ...entry } : {};
-    const srcMeta = next.meta && typeof next.meta === 'object' ? next.meta : {};
-    const toInt = (value) => {
-      const n = Number(value);
-      if (!Number.isFinite(n)) return 0;
-      return Math.trunc(n);
-    };
-    next.meta = {
-      charDelta: toInt(srcMeta.charDelta),
-      paraDelta: toInt(srcMeta.paraDelta),
-    };
-    return next;
-  });
-
-  return merged;
+  return { ...base, ...raw };
 }
 
 function loadState() {
@@ -998,8 +899,12 @@ function queueRemoteSync() {
   if (!supabase || !supabaseUser || hydratingRemoteState) return;
   if (autoSyncTimer) return;
 
-  const elapsed = Date.now() - lastSyncAt;
-  const delay = Math.max(0, AUTO_SYNC_INTERVAL_MS - elapsed);
+  const delay = (
+    syncUtils
+    && typeof syncUtils.computeAutoSyncDelay === 'function'
+  )
+    ? syncUtils.computeAutoSyncDelay(lastSyncAt, AUTO_SYNC_INTERVAL_MS)
+    : Math.max(0, AUTO_SYNC_INTERVAL_MS - (Date.now() - lastSyncAt));
   if (delay > 0) {
     const minutes = Math.ceil(delay / 60000);
     setSyncStatus(`자동 동기화 예약 (${minutes}분 후)`, 'idle');
@@ -1019,7 +924,12 @@ function scheduleAutoSyncRetry() {
     return;
   }
   autoSyncRetryCount += 1;
-  const retryDelay = AUTO_SYNC_RETRY_BASE_MS * Math.pow(2, autoSyncRetryCount - 1);
+  const retryDelay = (
+    syncUtils
+    && typeof syncUtils.computeRetryDelayMs === 'function'
+  )
+    ? syncUtils.computeRetryDelayMs(autoSyncRetryCount, AUTO_SYNC_RETRY_BASE_MS)
+    : AUTO_SYNC_RETRY_BASE_MS * Math.pow(2, autoSyncRetryCount - 1);
   const sec = Math.round(retryDelay / 1000);
   setSyncStatus(`자동 동기화 재시도 예정 (${sec}초 후, ${autoSyncRetryCount}/${AUTO_SYNC_RETRY_MAX})`, 'pending');
   autoSyncTimer = setTimeout(async () => {
@@ -1052,11 +962,16 @@ async function pushRemoteState(options = {}) {
     return false;
   }
   const remoteUpdatedAt = remoteMeta && remoteMeta.updated_at ? remoteMeta.updated_at : null;
-  const hasConflict = !!(
-    remoteUpdatedAt
-    && lastKnownRemoteUpdatedAt
-    && new Date(remoteUpdatedAt).getTime() > new Date(lastKnownRemoteUpdatedAt).getTime()
-  );
+  const hasConflict = (
+    syncUtils
+    && typeof syncUtils.hasRemoteConflict === 'function'
+  )
+    ? syncUtils.hasRemoteConflict(remoteUpdatedAt, lastKnownRemoteUpdatedAt)
+    : !!(
+      remoteUpdatedAt
+      && lastKnownRemoteUpdatedAt
+      && new Date(remoteUpdatedAt).getTime() > new Date(lastKnownRemoteUpdatedAt).getTime()
+    );
   if (hasConflict) {
     const conflictMsg = `원격 변경 감지: 다른 기기에서 ${new Date(remoteUpdatedAt).toLocaleString()}에 수정되었습니다.`;
     const overwrite = confirm(`${conflictMsg}\n로컬 상태로 덮어쓸까요? (취소 시 최신 원격 상태를 불러옵니다)`);
@@ -1202,8 +1117,32 @@ function handleSignedOut() {
   applyAuthState(null);
 }
 
-async function setupSupabase() {
-  const config = getEffectiveSupabaseConfig();
+async function setupSupabase(options = {}) {
+  const config = options.config || getEffectiveSupabaseConfig();
+  if (authConfigService && typeof authConfigService.setupSupabaseRuntime === 'function') {
+    const result = await authConfigService.setupSupabaseRuntime({
+      config,
+      persistConfig: saveSupabaseConfig,
+      ensureSdkLoaded: ensureSupabaseSdkLoaded,
+      sdkCreateClient: (window.supabase && window.supabase.createClient)
+        ? ((url, anon) => window.supabase.createClient(url, anon))
+        : null,
+      createCompatClient: createSupabaseCompatClient,
+      sdkErrorMessage: supabaseSdkError,
+      previousAuthSubscription: authSubscription,
+      onSignedIn: handleSignedIn,
+      onSignedOut: handleSignedOut,
+    });
+    if (!result.ok) {
+      setAuthStatus(result.message || 'Supabase 초기화 실패');
+      return false;
+    }
+    supabase = result.supabase;
+    authSubscription = result.authSubscription;
+    if (result.statusMessage) setAuthStatus(result.statusMessage);
+    if (result.authHookErrorMessage) setAuthStatus(result.authHookErrorMessage);
+    return true;
+  }
   if (!config || !config.url || !config.anon) {
     setAuthStatus('Supabase 설정이 없습니다. 관리자 설정 주입 또는 설정 저장을 완료하세요.');
     return false;
@@ -1571,7 +1510,9 @@ function createFolder(parentFolderId = null) {
 }
 
 function cloneStateForHistory() {
-  if (stateUtils) return stateUtils.cloneStateForHistory(state);
+  if (stateApi && typeof stateApi.cloneStateForHistory === 'function') {
+    return stateApi.cloneStateForHistory(state);
+  }
   const snapshot = JSON.parse(JSON.stringify(state));
   delete snapshot.historyEntries;
   return snapshot;
@@ -1616,9 +1557,13 @@ function addHistoryEntry(trigger, meta = {}, snapshotOverride = null) {
   const snapshot = snapshotOverride || cloneStateForHistory();
   const deltaMeta = getHistoryDeltaMeta(snapshot, meta);
   const payloadMeta = { ...meta, ...deltaMeta };
-  if (stateUtils) {
-    const entry = stateUtils.createHistoryEntry(trigger, payloadMeta, snapshot);
-    state.historyEntries = stateUtils.prependHistoryEntry(state.historyEntries, entry, 10);
+  if (
+    stateApi
+    && typeof stateApi.createHistoryEntry === 'function'
+    && typeof stateApi.prependHistoryEntry === 'function'
+  ) {
+    const entry = stateApi.createHistoryEntry(trigger, payloadMeta, snapshot);
+    state.historyEntries = stateApi.prependHistoryEntry(state.historyEntries, entry, 10);
     return;
   }
   const arr = Array.isArray(state.historyEntries) ? state.historyEntries : [];
@@ -1897,7 +1842,9 @@ function formatNumber(value) {
 }
 
 function formatDuration(totalSeconds) {
-  if (stateUtils) return stateUtils.formatDuration(totalSeconds);
+  if (stateApi && typeof stateApi.formatDuration === 'function') {
+    return stateApi.formatDuration(totalSeconds);
+  }
   const sec = Math.max(0, Number(totalSeconds) || 0);
   const h = Math.floor(sec / 3600);
   const m = Math.floor((sec % 3600) / 60);
@@ -1910,12 +1857,16 @@ function isTodayGoalLocked() {
 }
 
 function getGoalMetric(dateKey = todayKey()) {
-  if (stateUtils) return stateUtils.getGoalMetric(state.goalMetricByDate, dateKey);
+  if (stateApi && typeof stateApi.getGoalMetric === 'function') {
+    return stateApi.getGoalMetric(state.goalMetricByDate, dateKey);
+  }
   return state.goalMetricByDate[dateKey] === 'noSpaces' ? 'noSpaces' : 'withSpaces';
 }
 
 function getActualByGoalMetric(actualWithSpaces, actualNoSpaces, metric) {
-  if (stateUtils) return stateUtils.getActualByGoalMetric(actualWithSpaces, actualNoSpaces, metric);
+  if (stateApi && typeof stateApi.getActualByGoalMetric === 'function') {
+    return stateApi.getActualByGoalMetric(actualWithSpaces, actualNoSpaces, metric);
+  }
   return metric === 'noSpaces' ? actualNoSpaces : actualWithSpaces;
 }
 
@@ -2324,8 +2275,11 @@ function renderHistory() {
         summary: '안전 복원 전 자동 백업',
         ...getHistoryDeltaMeta(backupSnapshot, { scope: 'full' }),
       };
-      const backupEntry = stateUtils
-        ? stateUtils.createHistoryEntry('manual-save', backupMeta, backupSnapshot)
+      const backupEntry = (
+        stateApi
+        && typeof stateApi.createHistoryEntry === 'function'
+      )
+        ? stateApi.createHistoryEntry('manual-save', backupMeta, backupSnapshot)
         : {
           id: Date.now() + Math.floor(Math.random() * 1000),
           savedAt: new Date().toISOString(),
@@ -2365,9 +2319,9 @@ function renderHistory() {
 function tickTimer() {
   if (!state.pomodoro.running) return;
 
-  if (stateUtils) {
+  if (stateApi && typeof stateApi.tickPomodoro === 'function') {
     const date = todayKey();
-    const tick = stateUtils.tickPomodoro(state.pomodoro, getPomodoroMinutes());
+    const tick = stateApi.tickPomodoro(state.pomodoro, getPomodoroMinutes());
     state.pomodoro = tick.pomodoro;
     if (tick.focusDelta) {
       state.focusSecondsByDate[date] = (state.focusSecondsByDate[date] || 0) + tick.focusDelta;
@@ -2475,54 +2429,95 @@ async function handleManualSync() {
 }
 
 async function authSignUp() {
+  if (!authService || typeof authService.signUpWithIdentifier !== 'function') {
+    setAuthStatus('회원가입 기능을 초기화하지 못했습니다. 새로고침 후 다시 시도하세요.');
+    return;
+  }
   if (!supabase) {
     setAuthStatus('먼저 설정 저장을 눌러 Supabase 연결을 초기화하세요.');
     return;
   }
   const idRaw = $('auth-email').value.trim();
   const password = $('auth-password').value;
-  const resolved = resolveIdentifier(idRaw);
-  if (!resolved.ok) {
-    setAuthStatus(resolved.message);
+  const result = await authService.signUpWithIdentifier({
+    supabase,
+    idRaw,
+    password,
+    resolveIdentifier,
+  });
+  if (!result.ok) {
+    if (result.code === 'invalid_identifier') {
+      setAuthStatus(result.message || '아이디 형식을 확인하세요.');
+      return;
+    }
+    if (result.code === 'signup_error') {
+      setAuthStatus(result.error && result.error.message ? result.error.message : '회원가입에 실패했습니다.');
+      return;
+    }
+    setAuthStatus('회원가입 기능을 사용할 수 없습니다. 설정을 확인하세요.');
     return;
   }
-  const payload = resolved.username
-    ? { email: resolved.email, password, options: { data: { username: resolved.username } } }
-    : { email: resolved.email, password };
-  const { error } = await supabase.auth.signUp(payload);
-  setAuthStatus(error ? error.message : '회원가입 요청 완료. 아이디로 로그인할 수 있습니다.');
+  setAuthStatus('회원가입 요청 완료. 아이디로 로그인할 수 있습니다.');
 }
 
 async function authLogin() {
+  if (!authService || typeof authService.loginWithIdentifier !== 'function') {
+    setAuthStatus('로그인 기능을 초기화하지 못했습니다. 새로고침 후 다시 시도하세요.');
+    return;
+  }
   if (!supabase) {
     setAuthStatus('먼저 설정 저장을 눌러 Supabase 연결을 초기화하세요.');
     return;
   }
   const idRaw = $('auth-email').value.trim();
   const password = $('auth-password').value;
-  const resolved = resolveIdentifier(idRaw);
-  if (!resolved.ok) {
-    setAuthStatus(resolved.message);
+  pendingAuthPassword = password || '';
+  const result = await authService.loginWithIdentifier({
+    supabase,
+    idRaw,
+    password,
+    resolveIdentifier,
+  });
+  if (!result.ok) {
+    pendingAuthPassword = '';
+    if (result.code === 'invalid_identifier') {
+      setAuthStatus(result.message || '아이디 형식을 확인하세요.');
+      return;
+    }
+    if (result.code === 'login_error') {
+      setAuthStatus(result.error && result.error.message ? result.error.message : '로그인에 실패했습니다.');
+      return;
+    }
+    setAuthStatus('로그인 기능을 사용할 수 없습니다. 설정을 확인하세요.');
     return;
   }
-  pendingAuthPassword = password || '';
-  const { error } = await supabase.auth.signInWithPassword({ email: resolved.email, password });
-  if (error) pendingAuthPassword = '';
-  setAuthStatus(error ? error.message : '로그인 성공');
+  setAuthStatus('로그인 성공');
 }
 
 async function authAnonymousLogin() {
-  if (!supabase || !supabase.auth) {
-    setAuthStatus('익명 로그인 사용 불가: Supabase 연결이 초기화되지 않았습니다.');
-    return;
-  }
-  if (typeof supabase.auth.signInAnonymously !== 'function') {
-    setAuthStatus('익명 로그인 사용 불가: Supabase Anonymous provider 설정을 확인하세요.');
+  if (!authService || typeof authService.anonymousLogin !== 'function') {
+    setAuthStatus('익명 로그인 기능을 초기화하지 못했습니다. 새로고침 후 다시 시도하세요.');
     return;
   }
   pendingAuthPassword = '';
-  const { error } = await supabase.auth.signInAnonymously();
-  setAuthStatus(error ? `익명 로그인 실패: ${error.message}` : '익명 로그인 성공');
+  const result = await authService.anonymousLogin(supabase);
+  if (!result.ok) {
+    if (result.code === 'not_initialized') {
+      setAuthStatus('익명 로그인 사용 불가: Supabase 연결이 초기화되지 않았습니다.');
+      return;
+    }
+    if (result.code === 'unsupported_anonymous') {
+      setAuthStatus('익명 로그인 사용 불가: Supabase Anonymous provider 설정을 확인하세요.');
+      return;
+    }
+    if (result.code === 'login_error') {
+      setAuthStatus(`익명 로그인 실패: ${(result.error && result.error.message) || '알 수 없는 오류'}`);
+      return;
+    }
+    setAuthStatus('익명 로그인 실패: 잠시 후 다시 시도하세요.');
+    return;
+  }
+  setAuthStatus('익명 로그인 성공');
 }
 
 function openUpgradeDialog() {
@@ -2542,52 +2537,60 @@ function closeUpgradeDialog() {
 }
 
 async function upgradeAnonymousAccount() {
-  if (!supabase || !supabaseUser || !isAnonymousUser(supabaseUser)) {
-    setAuthStatus('익명 로그인 사용자만 회원가입 전환이 가능합니다.');
+  if (!authService || typeof authService.upgradeAnonymousAccount !== 'function') {
+    setAuthStatus('계정 전환 기능을 초기화하지 못했습니다. 새로고침 후 다시 시도하세요.');
     return;
   }
   const emailInput = $('upgrade-email');
   const passwordInput = $('upgrade-password');
   const idRaw = emailInput ? emailInput.value.trim() : '';
   const password = passwordInput ? passwordInput.value : '';
-  if (!idRaw || !password) {
-    setAuthStatus('아이디와 비밀번호를 입력하세요.');
-    return;
-  }
-  const resolved = resolveIdentifier(idRaw);
-  if (!resolved.ok) {
-    setAuthStatus(resolved.message);
-    return;
-  }
-  if (!supabase.auth || typeof supabase.auth.updateUser !== 'function') {
-    setAuthStatus('현재 클라이언트에서 계정 전환을 지원하지 않습니다.');
-    return;
-  }
-
-  const { error } = await supabase.auth.updateUser({
-    email: resolved.email,
+  const result = await authService.upgradeAnonymousAccount({
+    supabase,
+    supabaseUser,
+    isAnonymousUser,
+    idRaw,
     password,
-    data: resolved.username ? { username: resolved.username } : undefined,
+    resolveIdentifier,
+    onBeforeAutoSignIn: ({ password: nextPassword }) => {
+      pendingAuthPassword = nextPassword || '';
+    },
   });
-  if (error) {
-    showUiError('upgrade', error, { auth: true, sync: false, logContext: 'account upgrade failed' });
-    return;
-  }
-  pendingAuthPassword = password || '';
-  const signInResult = await supabase.auth.signInWithPassword({ email: resolved.email, password });
-  closeUpgradeDialog();
-  if (!signInResult || !signInResult.error) {
+  if (result.closeDialog) closeUpgradeDialog();
+  if (result.ok) {
     setAuthStatus('회원가입 완료: 자동 로그인되었습니다.');
     return;
   }
   pendingAuthPassword = '';
-
-  const msg = String(signInResult.error.message || '');
-  if (msg.toLowerCase().includes('confirm') || msg.toLowerCase().includes('verified')) {
+  if (result.code === 'not_eligible') {
+    setAuthStatus('익명 로그인 사용자만 회원가입 전환이 가능합니다.');
+    return;
+  }
+  if (result.code === 'missing_inputs') {
+    setAuthStatus('아이디와 비밀번호를 입력하세요.');
+    return;
+  }
+  if (result.code === 'invalid_identifier') {
+    setAuthStatus(result.message || '아이디 형식을 확인하세요.');
+    return;
+  }
+  if (result.code === 'unsupported_client') {
+    setAuthStatus('현재 클라이언트에서 계정 전환을 지원하지 않습니다.');
+    return;
+  }
+  if (result.code === 'update_error') {
+    showUiError('upgrade', result.error, { auth: true, sync: false, logContext: 'account upgrade failed' });
+    return;
+  }
+  if (result.code === 'auto_signin_limited') {
     setAuthStatus('회원가입 전환 완료. 인증 정책으로 즉시 로그인이 제한되었습니다.');
     return;
   }
-  showUiError('upgrade', signInResult.error, { auth: true, sync: false, logContext: 'account upgrade auto sign-in failed' });
+  if (result.code === 'auto_signin_error') {
+    showUiError('upgrade', result.error, { auth: true, sync: false, logContext: 'account upgrade auto sign-in failed' });
+    return;
+  }
+  setAuthStatus('계정 전환에 실패했습니다. 잠시 후 다시 시도하세요.');
 }
 
 async function authLogout() {
@@ -2668,11 +2671,17 @@ function updateWithdrawConfirmState() {
 }
 
 async function deleteRemoteStateImmediately(userId) {
+  if (authService && typeof authService.deleteRemoteStateImmediately === 'function') {
+    return authService.deleteRemoteStateImmediately(supabase, userId);
+  }
   if (!supabase || !userId) return { error: { message: '삭제 대상 사용자 정보가 없습니다.' } };
   return supabase.from('editor_states').delete().eq('user_id', userId);
 }
 
 async function deleteOwnAccountImmediately() {
+  if (authService && typeof authService.deleteOwnAccountImmediately === 'function') {
+    return authService.deleteOwnAccountImmediately(supabase, 'delete_my_account_rpc_v3');
+  }
   if (!supabase || typeof supabase.rpc !== 'function') {
     return { error: { message: '계정 삭제 RPC를 사용할 수 없습니다.' } };
   }
@@ -2680,39 +2689,86 @@ async function deleteOwnAccountImmediately() {
 }
 
 function isJwtExpiredError(errorLike) {
+  if (authService && typeof authService.isJwtExpiredError === 'function') {
+    return authService.isJwtExpiredError(errorLike);
+  }
   const msg = String((errorLike && errorLike.message) || errorLike || '').toLowerCase();
   return msg.includes('jwt') && msg.includes('expired');
 }
 
 async function ensureFreshAuthSession() {
+  if (authService && typeof authService.ensureFreshAuthSession === 'function') {
+    return authService.ensureFreshAuthSession(supabase);
+  }
   if (!supabase || !supabase.auth || typeof supabase.auth.getSession !== 'function') {
     return { ok: false, message: '세션 확인 기능을 사용할 수 없습니다.' };
   }
-
   const sessionResult = await supabase.auth.getSession();
   if (sessionResult && sessionResult.error) {
     return { ok: false, message: sessionResult.error.message || '세션 확인 실패' };
   }
-
-  let session = sessionResult && sessionResult.data ? sessionResult.data.session : null;
-  if (!session) return { ok: false, message: '로그인 세션이 없습니다.' };
-
-  const expiresAtSec = Number(session.expires_at || 0);
-  const shouldRefresh = !expiresAtSec || ((expiresAtSec * 1000) - Date.now() < 60 * 1000);
-  if (shouldRefresh && typeof supabase.auth.refreshSession === 'function') {
-    const refreshResult = await supabase.auth.refreshSession();
-    if (refreshResult && refreshResult.error) {
-      return { ok: false, message: refreshResult.error.message || '세션 갱신 실패' };
-    }
-    session = refreshResult && refreshResult.data ? refreshResult.data.session : session;
-  }
-
+  const session = sessionResult && sessionResult.data ? sessionResult.data.session : null;
   const user = session && session.user ? session.user : null;
   if (!user || !user.id) return { ok: false, message: '세션 사용자 확인 실패' };
   return { ok: true, user };
 }
 
 async function executeAccountDeletionFlow(user, options = {}) {
+  if (authService && typeof authService.executeAccountDeletionFlow === 'function') {
+    return authService.executeAccountDeletionFlow({
+      user,
+      deleteRemoteState: (userId) => deleteRemoteStateImmediately(userId),
+      deleteOwnAccount: () => deleteOwnAccountImmediately(),
+      ensureFreshSession: () => ensureFreshAuthSession(),
+      isJwtExpiredErrorFn: isJwtExpiredError,
+      onMissingUser: () => {
+        setAuthStatus('삭제 대상 사용자 확인에 실패했습니다.');
+        setSyncStatus('탈퇴 중단: 사용자 확인 실패', 'error');
+      },
+      onStart: () => {
+        setAuthStatus('회원 탈퇴 처리 중... 절대 창을 닫지 마세요.');
+        setSyncStatus('회원 탈퇴 처리 중…', 'pending');
+      },
+      onRemoteStateDeleteError: (error) => {
+        showUiError('withdraw', error, {
+          auth: true,
+          sync: true,
+          logContext: 'withdraw deleteRemoteState failed',
+        });
+      },
+      onDeleteAccountError: (error) => {
+        showUiError('withdraw', error, {
+          auth: true,
+          sync: true,
+          logContext: 'withdraw delete account rpc failed',
+        });
+        if ((error.message || '').includes('delete_my_account')) {
+          alert('회원 탈퇴 실패: 서버 설정이 완료되지 않았습니다. 관리자에게 문의하세요.');
+        }
+      },
+      onSuccess: async () => {
+        if (autoSyncTimer) {
+          clearTimeout(autoSyncTimer);
+          autoSyncTimer = null;
+        }
+        lastSyncAt = 0;
+        dirtyDocIds.clear();
+        replaceState(defaultState());
+        renderAll();
+        clearLocalEditorData();
+        showWithdrawOnAuthGate = false;
+        closeWithdrawDialog();
+        closeUpgradeDialog();
+        await supabase.auth.signOut();
+        setAuthStatus(options.successMessage || '회원 탈퇴 완료: 계정 및 클라우드 데이터가 영구 삭제되었습니다.');
+        setSyncStatus('회원 탈퇴 완료', 'ok');
+        if (options.showAlert) {
+          alert('회원 탈퇴가 완료되었습니다. 계정과 데이터는 영구 삭제되었으며 복구할 수 없습니다.');
+        }
+      },
+    });
+  }
+
   if (!user || !user.id) {
     setAuthStatus('삭제 대상 사용자 확인에 실패했습니다.');
     setSyncStatus('탈퇴 중단: 사용자 확인 실패', 'error');
@@ -2783,80 +2839,90 @@ async function authWithdraw() {
     setAuthStatus('먼저 설정 저장을 눌러 Supabase 연결을 초기화하세요.');
     return;
   }
+  if (!authService || typeof authService.resolveWithdrawTargetUser !== 'function') {
+    setAuthStatus('탈퇴 확인 기능을 초기화하지 못했습니다. 새로고침 후 다시 시도하세요.');
+    setSyncStatus('탈퇴 중단: 인증 서비스 초기화 실패', 'error');
+    return;
+  }
   const requiresCredentialReauth = !(supabaseUser && isAnonymousUser(supabaseUser));
   const emailInput = $('withdraw-email');
   const passwordInput = $('withdraw-password');
   const inputEmail = emailInput ? emailInput.value.trim() : '';
   const inputPassword = passwordInput ? passwordInput.value : '';
-  if (requiresCredentialReauth && (!inputEmail || !inputPassword)) {
-    setAuthStatus('회원 탈퇴 전, 아이디/비밀번호로 다시 로그인해 계정을 확인하세요.');
-    return;
-  }
-
-  let confirmedUser = supabaseUser;
-  if (requiresCredentialReauth) {
-    setAuthStatus('탈퇴 계정 확인을 위해 재로그인 중...');
-    const resolved = resolveIdentifier(inputEmail);
-    if (!resolved.ok) {
-      setAuthStatus(resolved.message);
+  if (requiresCredentialReauth) setAuthStatus('탈퇴 계정 확인을 위해 재로그인 중...');
+  const verify = await authService.resolveWithdrawTargetUser({
+    supabase,
+    supabaseUser,
+    requiresCredentialReauth,
+    inputEmail,
+    inputPassword,
+    resolveIdentifier,
+    ensureFreshSessionFn: (client) => ensureFreshAuthSession(client),
+  });
+  if (!verify.ok) {
+    if (verify.code === 'missing_credentials') {
+      setAuthStatus('회원 탈퇴 전, 아이디/비밀번호로 다시 로그인해 계정을 확인하세요.');
+      return;
+    }
+    if (verify.code === 'invalid_identifier') {
+      setAuthStatus(verify.message || '아이디 형식을 확인하세요.');
       setSyncStatus('탈퇴 중단: 계정 확인 실패', 'error');
       return;
     }
-    const signInResult = await supabase.auth.signInWithPassword({ email: resolved.email, password: inputPassword });
-    if (signInResult && signInResult.error) {
-      showUiError('withdraw', signInResult.error, { auth: true, sync: false, logContext: 'withdraw re-auth failed' });
+    if (verify.code === 'reauth_failed') {
+      showUiError('withdraw', verify.error, { auth: true, sync: false, logContext: 'withdraw re-auth failed' });
       setSyncStatus('탈퇴 중단: 계정 확인 실패', 'error');
       return;
     }
-
-    const sessionResult = await supabase.auth.getSession();
-    confirmedUser = sessionResult && sessionResult.data && sessionResult.data.session
-      ? sessionResult.data.session.user
-      : null;
-    if (!confirmedUser || !confirmedUser.id) {
+    if (verify.code === 'user_missing_after_reauth') {
       setAuthStatus('재로그인은 되었지만 사용자 확인에 실패했습니다.');
       setSyncStatus('탈퇴 중단: 사용자 확인 실패', 'error');
       return;
     }
-    const confirmedEmail = String(confirmedUser.email || '').trim().toLowerCase();
-    if (confirmedEmail && confirmedEmail !== resolved.email.toLowerCase()) {
-      await supabase.auth.signOut();
+    if (verify.code === 'account_mismatch') {
       setAuthStatus('입력한 아이디와 로그인된 계정이 다릅니다. 회원 탈퇴를 중단했습니다.');
       setSyncStatus('탈퇴 중단: 계정 불일치', 'error');
       return;
     }
-    const fresh = await ensureFreshAuthSession();
-    if (!fresh.ok) {
-      setAuthStatus(`재로그인 후 세션 갱신 실패: ${fresh.message}`);
+    if (verify.code === 'refresh_failed') {
+      setAuthStatus(`재로그인 후 세션 갱신 실패: ${verify.message || '알 수 없는 오류'}`);
       setSyncStatus('탈퇴 중단: 세션 갱신 실패', 'error');
       return;
     }
-    confirmedUser = fresh.user;
-  } else if (!confirmedUser || !confirmedUser.id) {
-    setAuthStatus('익명 세션이 만료되어 탈퇴를 진행할 수 없습니다. 다시 시작해 주세요.');
-    setSyncStatus('탈퇴 중단: 세션 만료', 'error');
+    if (verify.code === 'anonymous_session_expired') {
+      setAuthStatus('익명 세션이 만료되어 탈퇴를 진행할 수 없습니다. 다시 시작해 주세요.');
+      setSyncStatus('탈퇴 중단: 세션 만료', 'error');
+      return;
+    }
+    setAuthStatus('탈퇴 계정 확인에 실패했습니다. 잠시 후 다시 시도하세요.');
+    setSyncStatus('탈퇴 중단: 계정 확인 실패', 'error');
     return;
   }
-  await executeAccountDeletionFlow(confirmedUser, { showAlert: true });
+  await executeAccountDeletionFlow(verify.user, { showAlert: true });
 }
 
 async function saveAuthConfigAndInit() {
+  if (!authConfigService || typeof authConfigService.resolveConfigForSave !== 'function') {
+    setAuthStatus('설정 저장 기능을 초기화하지 못했습니다. 새로고침 후 다시 시도하세요.');
+    return;
+  }
   const urlInput = $('sb-url');
   const anonInput = $('sb-anon');
   const embedded = getEmbeddedSupabaseConfig();
-  const url = (urlInput && urlInput.value ? urlInput.value.trim() : '') || (embedded ? embedded.url : '');
-  const anon = (anonInput && anonInput.value ? anonInput.value.trim() : '') || (embedded ? embedded.anon : '');
-  if (!url || !anon) {
+  const resolvedConfig = authConfigService.resolveConfigForSave({
+    urlInputValue: urlInput && urlInput.value ? urlInput.value : '',
+    anonInputValue: anonInput && anonInput.value ? anonInput.value : '',
+    embeddedConfig: embedded,
+  });
+  if (!resolvedConfig.ok) {
     setAuthStatus('관리자 Supabase 설정이 누락되었습니다.');
     return;
   }
 
   setAuthStatus('설정 저장 및 연결 확인 중...');
-  const saved = saveSupabaseConfig(url, anon);
-  if (!saved) return;
 
   try {
-    const ok = await setupSupabase();
+    const ok = await setupSupabase({ config: { url: resolvedConfig.url, anon: resolvedConfig.anon } });
     if (ok) {
       setAuthStatus('설정 저장 완료');
     } else {
@@ -2965,276 +3031,62 @@ function applyAppLayout() {
 
 function bindEvents() {
   initAuthGateBindings();
-  const commandPaletteBtn = $('command-palette-btn');
-  const commandPaletteDialog = $('command-palette-dialog');
-  const commandPaletteInput = $('command-palette-input');
-  const commandPaletteCloseBtn = $('command-palette-close-btn');
-  const toggleTreeBtn = $('toggle-tree-btn');
-  const toggleCalendarBtn = $('toggle-calendar-btn');
-  const showTreeBar = $('show-tree-bar');
-  const showCalendarBar = $('show-calendar-bar');
-  const sidebarToolbarBtn = $('toggle-sidebar-toolbar-btn');
-  const calendarToolbarBtn = $('toggle-calendar-toolbar-btn');
-  const editorA = $('editor-a');
-  const editorB = $('editor-b');
-  const goalInput = $('goal-input');
-  const goalNoSpacesCheck = $('goal-no-spaces-check');
-  const goalLockBtn = $('goal-lock-btn');
-  const calendarModeToggleBtn = $('calendar-mode-toggle-btn');
-  const calendarPrevMonthBtn = $('calendar-prev-month-btn');
-  const calendarNextMonthBtn = $('calendar-next-month-btn');
-  const historyCloseBtn = $('history-close');
-  const timerToggleBtn = $('timer-toggle');
-  const timerSkipBtn = $('timer-skip');
-  const pomodoroFocusMinInput = $('pomodoro-focus-min');
-  const pomodoroBreakMinInput = $('pomodoro-break-min');
-  const pomodoroApplyBtn = $('pomodoro-apply');
-  const logoutBtn = $('logout-btn');
-  const upgradeAccountBtn = $('upgrade-account-btn');
-  const upgradeCancelBtn = $('upgrade-cancel-btn');
-  const upgradeConfirmBtn = $('upgrade-confirm-btn');
-  const withdrawBtn = $('withdraw-btn');
-  const withdrawCancelBtn = $('withdraw-cancel-btn');
-  const withdrawConfirmBtn = $('withdraw-confirm-btn');
-  const withdrawCheck = $('withdraw-confirm-check');
-  const withdrawText = $('withdraw-confirm-text');
-  const withdrawEmail = $('withdraw-email');
-  const withdrawPassword = $('withdraw-password');
-  const encryptionUnlockDialog = $('encryption-unlock-dialog');
-  const encryptionUnlockPassword = $('encryption-unlock-password');
-  const encryptionUnlockConfirmBtn = $('encryption-unlock-confirm-btn');
-  const encryptionUnlockCancelBtn = $('encryption-unlock-cancel-btn');
-
-  if (commandPaletteBtn) commandPaletteBtn.onclick = openCommandPalette;
-  if (toggleTreeBtn) toggleTreeBtn.onclick = () => {
-    if (window.innerWidth <= MOBILE_MINI_BREAKPOINT) {
-      mobileMiniSidebarOpen = false;
-      applyAppLayout();
-      return;
-    }
-    layoutPrefs.showSidebar = !layoutPrefs.showSidebar;
-    saveLayoutPrefs();
-    applyAppLayout();
-  };
-  if (toggleCalendarBtn) toggleCalendarBtn.onclick = () => {
-    if (window.innerWidth <= MOBILE_MINI_BREAKPOINT) {
-      mobileMiniCalendarOpen = false;
-      applyAppLayout();
-      return;
-    }
-    layoutPrefs.showCalendar = !layoutPrefs.showCalendar;
-    saveLayoutPrefs();
-    applyAppLayout();
-  };
-  if (showTreeBar) showTreeBar.onclick = () => {
-    if (window.innerWidth <= MOBILE_MINI_BREAKPOINT) {
-      mobileMiniSidebarOpen = true;
-      mobileMiniCalendarOpen = false;
-      applyAppLayout();
-      return;
-    }
-    layoutPrefs.showSidebar = true;
-    saveLayoutPrefs();
-    applyAppLayout();
-  };
-  if (showCalendarBar) showCalendarBar.onclick = () => {
-    if (window.innerWidth <= MOBILE_MINI_BREAKPOINT) {
-      mobileMiniCalendarOpen = true;
-      mobileMiniSidebarOpen = false;
-      applyAppLayout();
-      return;
-    }
-    layoutPrefs.showCalendar = true;
-    saveLayoutPrefs();
-    applyAppLayout();
-  };
-  if (sidebarToolbarBtn) sidebarToolbarBtn.onclick = () => {
-    if (window.innerWidth <= MOBILE_MINI_BREAKPOINT) {
-      mobileMiniSidebarOpen = !mobileMiniSidebarOpen;
-      if (mobileMiniSidebarOpen) mobileMiniCalendarOpen = false;
-      applyAppLayout();
-      return;
-    }
-    layoutPrefs.showSidebar = !layoutPrefs.showSidebar;
-    saveLayoutPrefs();
-    applyAppLayout();
-  };
-  if (calendarToolbarBtn) calendarToolbarBtn.onclick = () => {
-    if (window.innerWidth <= MOBILE_MINI_BREAKPOINT) {
-      mobileMiniCalendarOpen = !mobileMiniCalendarOpen;
-      if (mobileMiniCalendarOpen) mobileMiniSidebarOpen = false;
-      applyAppLayout();
-      return;
-    }
-    if (window.innerWidth <= 1100) return;
-    layoutPrefs.showCalendar = !layoutPrefs.showCalendar;
-    saveLayoutPrefs();
-    applyAppLayout();
-  };
-
-  if (editorA) editorA.addEventListener('focus', () => {
-    activePane = 'a';
-  });
-  if (editorB) editorB.addEventListener('focus', () => {
-    activePane = 'b';
-  });
-  if (editorA) editorA.addEventListener('input', (e) => updateEditorPane('a', e.target.value));
-  if (editorB) editorB.addEventListener('input', (e) => updateEditorPane('b', e.target.value));
-
-  if (goalInput) goalInput.addEventListener('change', (e) => {
-    if (isTodayGoalLocked()) {
-      e.target.value = state.goalByDate[todayKey()] || 0;
-      return;
-    }
-    state.goalByDate[todayKey()] = Number(e.target.value || 0);
-    saveState();
-    updateProgress();
-  });
-  if (goalNoSpacesCheck) goalNoSpacesCheck.addEventListener('change', (e) => {
-    if (isTodayGoalLocked()) {
-      e.target.checked = getGoalMetric(todayKey()) === 'noSpaces';
-      return;
-    }
-    state.goalMetricByDate[todayKey()] = e.target.checked ? 'noSpaces' : 'withSpaces';
-    saveState();
-    updateProgress();
-  });
-  if (goalLockBtn) goalLockBtn.onclick = () => {
-    const key = todayKey();
-    const locked = !!state.goalLockedByDate[key];
-    state.goalLockedByDate[key] = !locked;
-    saveState();
-    updateGoalLockUI();
-  };
-  if (calendarModeToggleBtn) {
-    calendarModeToggleBtn.onclick = () => {
-      setCalendarViewMode(calendarViewMode === 'calendar' ? 'table' : 'calendar');
-    };
-  }
-  if (calendarPrevMonthBtn) calendarPrevMonthBtn.onclick = () => shiftCalendarMonth(-1);
-  if (calendarNextMonthBtn) calendarNextMonthBtn.onclick = () => shiftCalendarMonth(1);
-
-  if (historyCloseBtn) historyCloseBtn.onclick = () => {
-    const dlg = $('history-dialog');
-    if (dlg && typeof dlg.close === 'function') dlg.close();
-  };
-
-  if (timerToggleBtn) timerToggleBtn.onclick = () => {
-    state.pomodoro.running = !state.pomodoro.running;
-    ensureTimerInterval();
-    saveState();
-    renderTimer();
-  };
-  if (timerSkipBtn) timerSkipBtn.onclick = () => {
-    state.pomodoro.left = 1;
-    state.pomodoro.running = true;
-    ensureTimerInterval();
-    saveState();
-    renderTimer();
-  };
-  if (pomodoroApplyBtn) pomodoroApplyBtn.onclick = applyPomodoroMinutesFromInputs;
-  if (pomodoroFocusMinInput) pomodoroFocusMinInput.addEventListener('change', applyPomodoroMinutesFromInputs);
-  if (pomodoroBreakMinInput) pomodoroBreakMinInput.addEventListener('change', applyPomodoroMinutesFromInputs);
-
-  if (logoutBtn) logoutBtn.onclick = authLogout;
-  if (upgradeAccountBtn) upgradeAccountBtn.onclick = openUpgradeDialog;
-  if (upgradeCancelBtn) upgradeCancelBtn.onclick = closeUpgradeDialog;
-  if (upgradeConfirmBtn) upgradeConfirmBtn.onclick = upgradeAnonymousAccount;
-  if (withdrawBtn) withdrawBtn.onclick = openWithdrawDialog;
-  if (withdrawCancelBtn) withdrawCancelBtn.onclick = closeWithdrawDialog;
-  if (withdrawCheck) withdrawCheck.addEventListener('change', updateWithdrawConfirmState);
-  if (withdrawText) withdrawText.addEventListener('input', updateWithdrawConfirmState);
-  if (withdrawEmail) withdrawEmail.addEventListener('input', updateWithdrawConfirmState);
-  if (withdrawPassword) withdrawPassword.addEventListener('input', updateWithdrawConfirmState);
-  if (withdrawConfirmBtn) withdrawConfirmBtn.onclick = authWithdraw;
-  if (encryptionUnlockConfirmBtn) encryptionUnlockConfirmBtn.onclick = () => {
-    const value = encryptionUnlockPassword && encryptionUnlockPassword.value
-      ? encryptionUnlockPassword.value
-      : '';
-    settleEncryptionUnlockResolver(value);
-    closeEncryptionUnlockDialog();
-  };
-  if (encryptionUnlockCancelBtn) encryptionUnlockCancelBtn.onclick = () => {
-    closeEncryptionUnlockDialog();
-    settleEncryptionUnlockResolver('');
-  };
-  if (encryptionUnlockPassword) encryptionUnlockPassword.addEventListener('keydown', (e) => {
-    if (e.key !== 'Enter') return;
-    e.preventDefault();
-    if (encryptionUnlockConfirmBtn) encryptionUnlockConfirmBtn.click();
-  });
-  if (encryptionUnlockDialog) {
-    encryptionUnlockDialog.addEventListener('cancel', () => {
-      settleEncryptionUnlockResolver('');
-    });
-    encryptionUnlockDialog.addEventListener('close', () => {
-      settleEncryptionUnlockResolver('');
-    });
-  }
-  document.addEventListener('keydown', (e) => {
-    const isCmdK = (e.ctrlKey || e.metaKey) && String(e.key).toLowerCase() === 'k';
-    if (isCmdK) {
-      e.preventDefault();
-      openCommandPalette();
-      return;
-    }
-    if (e.altKey && e.key === '1') switchSplit('single');
-    if (e.altKey && e.key === '\\') switchSplit('vertical');
-    if (e.altKey && e.key === '-') switchSplit('horizontal');
-  });
-  if (commandPaletteInput) {
-    commandPaletteInput.addEventListener('input', () => {
-      commandPaletteSelection = 0;
-      renderCommandPalette();
-    });
-    commandPaletteInput.addEventListener('keydown', (e) => {
-      const commands = getFilteredCommands();
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        commandPaletteSelection = Math.min(commands.length - 1, commandPaletteSelection + 1);
-        renderCommandPalette();
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        commandPaletteSelection = Math.max(0, commandPaletteSelection - 1);
-        renderCommandPalette();
-      } else if (e.key === 'Enter') {
-        e.preventDefault();
-        if (commands[commandPaletteSelection]) runCommandFromPalette(commands[commandPaletteSelection].id);
-      } else if (e.key === 'Escape') {
-        e.preventDefault();
-        closeCommandPalette();
-      }
-    });
-  }
-  if (commandPaletteDialog) {
-    commandPaletteDialog.addEventListener('cancel', (e) => {
-      e.preventDefault();
-      closeCommandPalette();
-    });
-    commandPaletteDialog.addEventListener('click', (e) => {
-      if (e.target === commandPaletteDialog) closeCommandPalette();
-    });
-  }
-  if (commandPaletteCloseBtn) commandPaletteCloseBtn.onclick = closeCommandPalette;
-
-  document.addEventListener('click', (e) => {
-    if (window.innerWidth > MOBILE_MINI_BREAKPOINT) return;
-    const sidebar = $('sidebar');
-    const statsPanel = document.querySelector('.stats-panel');
-    const showTreeBarBtn = $('show-tree-bar');
-    const showCalendarBarBtn = $('show-calendar-bar');
-    const sidebarToolbar = $('toggle-sidebar-toolbar-btn');
-    const calendarToolbar = $('toggle-calendar-toolbar-btn');
-    if (sidebar && sidebar.contains(e.target)) return;
-    if (statsPanel && statsPanel.contains(e.target)) return;
-    if (showTreeBarBtn && showTreeBarBtn.contains(e.target)) return;
-    if (showCalendarBarBtn && showCalendarBarBtn.contains(e.target)) return;
-    if (sidebarToolbar && sidebarToolbar.contains(e.target)) return;
-    if (calendarToolbar && calendarToolbar.contains(e.target)) return;
-    if (!mobileMiniSidebarOpen && !mobileMiniCalendarOpen) return;
-    mobileMiniSidebarOpen = false;
-    mobileMiniCalendarOpen = false;
-    applyAppLayout();
+  if (!uiBindings || typeof uiBindings.bindUiEvents !== 'function') return;
+  uiBindings.bindUiEvents({
+    $,
+    MOBILE_MINI_BREAKPOINT,
+    layoutPrefs,
+    saveLayoutPrefs,
+    applyAppLayout,
+    getMobileMiniState: () => ({
+      sidebarOpen: mobileMiniSidebarOpen,
+      calendarOpen: mobileMiniCalendarOpen,
+    }),
+    setMobileMiniState: ({ sidebarOpen, calendarOpen }) => {
+      mobileMiniSidebarOpen = !!sidebarOpen;
+      mobileMiniCalendarOpen = !!calendarOpen;
+    },
+    setActivePane: (pane) => {
+      activePane = pane;
+    },
+    updateEditorPane,
+    isTodayGoalLocked,
+    todayKey,
+    state,
+    saveState,
+    updateProgress,
+    getGoalMetric,
+    updateGoalLockUI,
+    setCalendarViewMode,
+    getCalendarViewMode: () => calendarViewMode,
+    shiftCalendarMonth,
+    closeHistoryDialog: () => {
+      const dlg = $('history-dialog');
+      if (dlg && typeof dlg.close === 'function') dlg.close();
+    },
+    ensureTimerInterval,
+    renderTimer,
+    applyPomodoroMinutesFromInputs,
+    authLogout,
+    openUpgradeDialog,
+    closeUpgradeDialog,
+    upgradeAnonymousAccount,
+    openWithdrawDialog,
+    closeWithdrawDialog,
+    updateWithdrawConfirmState,
+    authWithdraw,
+    settleEncryptionUnlockResolver,
+    closeEncryptionUnlockDialog,
+    openCommandPalette,
+    closeCommandPalette,
+    renderCommandPalette,
+    getFilteredCommands,
+    runCommandFromPalette,
+    getCommandPaletteSelection: () => commandPaletteSelection,
+    setCommandPaletteSelection: (value) => {
+      commandPaletteSelection = value;
+    },
+    switchSplit,
   });
 }
 

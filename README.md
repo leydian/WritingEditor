@@ -10,6 +10,10 @@
 - `styles.css`: 스타일
 - `error-utils.js`: 오류 처리 유틸
 - `state-utils.js`: 상태 처리 유틸
+- `auth-service.js`: 인증 세션/탈퇴 서비스 유틸
+- `auth-config-service.js`: Supabase 설정/초기화 서비스 유틸
+- `sync-utils.js`: 동기화 계산/충돌 판정 유틸
+- `ui-bindings.js`: UI 이벤트 바인딩 모듈
 - `tests/`: 유닛 테스트
 - `scripts/`: 점검/자동화 스크립트
 - `docs/PROJECT_UNIFIED.md`: 단일 기준 운영 문서
@@ -31,6 +35,9 @@
 node .\tests\crypto-utils.test.js
 node .\tests\error-utils.test.js
 node .\tests\state-utils.test.js
+node .\tests\auth-service.test.js
+node .\tests\auth-config-service.test.js
+node .\tests\sync-utils.test.js
 node .\scripts\security-preflight-check.js
 ```
 
