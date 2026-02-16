@@ -14,6 +14,7 @@ const MOBILE_MINI_BREAKPOINT = 900;
 const WITHDRAW_CONFIRM_TEXT = '회원탈퇴';
 const EMBEDDED_SUPABASE_URL = 'https://rvrysnatyimuilarxfft.supabase.co';
 const EMBEDDED_SUPABASE_ANON = 'sb_publishable_v_aVOb5bAPP3pr1dF7POBQ_qnxCWVho';
+const stateUtils = (typeof StateUtils !== 'undefined' && StateUtils) ? StateUtils : null;
 
 function seoulDateParts(date = new Date()) {
   const parts = new Intl.DateTimeFormat('en-CA', {
@@ -91,6 +92,7 @@ function saveLayoutPrefs() {
 }
 
 function defaultState() {
+  if (stateUtils) return stateUtils.defaultState();
   return {
     docs: [{ id: 'd1', name: '새 문서.txt', folderId: null, content: '' }],
     folders: [],
@@ -109,6 +111,7 @@ function defaultState() {
 }
 
 function normalizeState(raw) {
+  if (stateUtils) return stateUtils.normalizeState(raw);
   const base = defaultState();
   if (!raw || typeof raw !== 'object') return base;
 
@@ -1110,14 +1113,20 @@ function createFolder(parentFolderId = null) {
 }
 
 function cloneStateForHistory() {
+  if (stateUtils) return stateUtils.cloneStateForHistory(state);
   const snapshot = JSON.parse(JSON.stringify(state));
   delete snapshot.historyEntries;
   return snapshot;
 }
 
 function addHistoryEntry(trigger, meta = {}, snapshotOverride = null) {
-  const arr = Array.isArray(state.historyEntries) ? state.historyEntries : [];
   const snapshot = snapshotOverride || cloneStateForHistory();
+  if (stateUtils) {
+    const entry = stateUtils.createHistoryEntry(trigger, meta, snapshot);
+    state.historyEntries = stateUtils.prependHistoryEntry(state.historyEntries, entry, 10);
+    return;
+  }
+  const arr = Array.isArray(state.historyEntries) ? state.historyEntries : [];
   arr.unshift({
     id: Date.now() + Math.floor(Math.random() * 1000),
     savedAt: new Date().toISOString(),
@@ -1288,6 +1297,7 @@ function updateProgress() {
 }
 
 function formatDuration(totalSeconds) {
+  if (stateUtils) return stateUtils.formatDuration(totalSeconds);
   const sec = Math.max(0, Number(totalSeconds) || 0);
   const h = Math.floor(sec / 3600);
   const m = Math.floor((sec % 3600) / 60);
@@ -1300,10 +1310,12 @@ function isTodayGoalLocked() {
 }
 
 function getGoalMetric(dateKey = todayKey()) {
+  if (stateUtils) return stateUtils.getGoalMetric(state.goalMetricByDate, dateKey);
   return state.goalMetricByDate[dateKey] === 'noSpaces' ? 'noSpaces' : 'withSpaces';
 }
 
 function getActualByGoalMetric(actualWithSpaces, actualNoSpaces, metric) {
+  if (stateUtils) return stateUtils.getActualByGoalMetric(actualWithSpaces, actualNoSpaces, metric);
   return metric === 'noSpaces' ? actualNoSpaces : actualWithSpaces;
 }
 
@@ -1402,7 +1414,8 @@ function switchSplit(mode) {
 function exportTxt() {
   const d = getDoc(state.activeDocA);
   if (!d) return;
-  const blob = new Blob([d.content], { type: 'text/plain;charset=utf-8' });
+  // Add UTF-8 BOM so mobile text viewers reliably detect Korean encoding.
+  const blob = new Blob(['\uFEFF', d.content], { type: 'text/plain;charset=utf-8' });
   downloadBlob(blob, `${d.name.replace(/\.[^/.]+$/, '')}_${todayKey()}.txt`);
 }
 
@@ -1502,20 +1515,35 @@ function renderHistory() {
 function tickTimer() {
   if (!state.pomodoro.running) return;
 
-  if (state.pomodoro.mode === 'focus') {
+  if (stateUtils) {
     const date = todayKey();
-    state.focusSecondsByDate[date] = (state.focusSecondsByDate[date] || 0) + 1;
-  }
-  state.pomodoro.left -= 1;
-  if (state.pomodoro.left <= 0) {
-    const completedMode = state.pomodoro.mode;
-    const date = todayKey();
-    if (completedMode === 'focus') {
-      state.sessionsByDate[date] = (state.sessionsByDate[date] || 0) + 1;
+    const tick = stateUtils.tickPomodoro(state.pomodoro);
+    state.pomodoro = tick.pomodoro;
+    if (tick.focusDelta) {
+      state.focusSecondsByDate[date] = (state.focusSecondsByDate[date] || 0) + tick.focusDelta;
     }
-    state.pomodoro.mode = state.pomodoro.mode === 'focus' ? 'break' : 'focus';
-    state.pomodoro.left = state.pomodoro.mode === 'focus' ? 25 * 60 : 5 * 60;
-    alert(`${completedMode === 'focus' ? '집중' : '휴식'} 완료! 다음: ${state.pomodoro.mode}`);
+    if (tick.sessionDelta) {
+      state.sessionsByDate[date] = (state.sessionsByDate[date] || 0) + tick.sessionDelta;
+    }
+    if (tick.completedMode) {
+      alert(`${tick.completedMode === 'focus' ? '집중' : '휴식'} 완료! 다음: ${state.pomodoro.mode}`);
+    }
+  } else {
+    if (state.pomodoro.mode === 'focus') {
+      const date = todayKey();
+      state.focusSecondsByDate[date] = (state.focusSecondsByDate[date] || 0) + 1;
+    }
+    state.pomodoro.left -= 1;
+    if (state.pomodoro.left <= 0) {
+      const completedMode = state.pomodoro.mode;
+      const date = todayKey();
+      if (completedMode === 'focus') {
+        state.sessionsByDate[date] = (state.sessionsByDate[date] || 0) + 1;
+      }
+      state.pomodoro.mode = state.pomodoro.mode === 'focus' ? 'break' : 'focus';
+      state.pomodoro.left = state.pomodoro.mode === 'focus' ? 25 * 60 : 5 * 60;
+      alert(`${completedMode === 'focus' ? '집중' : '휴식'} 완료! 다음: ${state.pomodoro.mode}`);
+    }
   }
 
   saveState();

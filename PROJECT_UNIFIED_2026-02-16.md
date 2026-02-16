@@ -4,7 +4,7 @@
 기준 경로: `C:\dlatl\WritingEditor`  
 기준 브랜치: `main`  
 원격 저장소: `https://github.com/leydian/WritingEditor`  
-현재 앱 스크립트 버전: `index.html` -> `app.js?v=62`
+현재 앱 스크립트 버전: `index.html` -> `app.js?v=63`
 
 ## 1. 문서 통합 범위
 
@@ -111,7 +111,8 @@
 - UI 오류 통합 함수: `showUiError(...)`
 
 4. 테스트
-- `tests/error-utils.test.js` (메시지 매핑/오류 유틸 최소 단위 테스트)
+- `tests/error-utils.test.js` (메시지 매핑/오류 유틸 단위 테스트)
+- `tests/state-utils.test.js` (상태 정규화/히스토리/목표 기준/포모도로 틱 단위 테스트)
 
 ## 6. Supabase 운영 기준
 
