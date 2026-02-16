@@ -1456,28 +1456,33 @@ function downloadBlob(blob, name) {
   const isIOS = /iphone|ipad|ipod/.test(ua);
 
   if (isIOS) {
-    // iOS Safari can mis-handle blob URL downloads for .txt. Use data URL fallback.
-    const reader = new FileReader();
-    reader.onload = () => {
+    const filename = name || `export_${todayKey()}.txt`;
+    // Prefer native share sheet with a real file so iOS users can save to Files.
+    if (navigator.share && navigator.canShare) {
       try {
-        const dataUrl = typeof reader.result === 'string' ? reader.result : '';
-        if (dataUrl) {
-          window.open(dataUrl, '_blank');
+        const file = new File([blob], filename, { type: blob.type || 'text/plain;charset=utf-8' });
+        if (navigator.canShare({ files: [file] })) {
+          navigator.share({ files: [file], title: filename }).catch(() => {});
           return;
         }
       } catch (_error) {
-        // noop
+        // fall through
       }
-      const url = URL.createObjectURL(blob);
-      window.open(url, '_blank');
-      setTimeout(() => URL.revokeObjectURL(url), 1500);
-    };
-    reader.onerror = () => {
-      const url = URL.createObjectURL(blob);
-      window.open(url, '_blank');
-      setTimeout(() => URL.revokeObjectURL(url), 1500);
-    };
-    reader.readAsDataURL(blob);
+    }
+    // Fallback: try normal download click first.
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.rel = 'noopener';
+    a.target = '_self';
+    document.body.appendChild(a);
+    try {
+      a.click();
+    } finally {
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 30000);
+    }
     return;
   }
 
