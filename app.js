@@ -41,6 +41,7 @@ let authSubscription = null;
 let timerRef = null;
 let activePane = 'a';
 let sidebarWidth = 240;
+let calendarWidth = 260;
 let autoSyncTimer = null;
 let lastSyncAt = 0;
 let historyAutoTimer = null;
@@ -50,6 +51,7 @@ let supabaseSdkError = '';
 let showWithdrawOnAuthGate = false;
 let mobileMiniSidebarOpen = false;
 let mobileMiniCalendarOpen = false;
+let calendarViewMode = 'calendar';
 const dirtyDocIds = new Set();
 const layoutPrefs = loadLayoutPrefs();
 
@@ -96,6 +98,7 @@ function defaultState() {
     activeDocB: null,
     split: 'single',
     goalByDate: {},
+    goalLockedByDate: {},
     progressByDate: {},
     sessionsByDate: {},
     focusSecondsByDate: {},
@@ -117,6 +120,7 @@ function normalizeState(raw) {
   if (!Array.isArray(merged.docs)) merged.docs = base.docs;
   if (!Array.isArray(merged.folders)) merged.folders = [];
   if (!Array.isArray(merged.historyEntries)) merged.historyEntries = [];
+  if (!merged.goalLockedByDate || typeof merged.goalLockedByDate !== 'object') merged.goalLockedByDate = {};
   // Drop deprecated state key from older snapshots.
   if (Object.prototype.hasOwnProperty.call(merged, 'historyByDoc')) delete merged.historyByDoc;
   if (!merged.sessionsByDate || typeof merged.sessionsByDate !== 'object') merged.sessionsByDate = {};
@@ -945,8 +949,8 @@ function renderTree() {
     });
   };
 
-  tree.appendChild(mk(' + 루트 문서 생성', '', () => createDoc(null), [], null, null));
-  tree.appendChild(mk(' + 루트 폴더 생성', '', () => createFolder(null), [], null, null));
+  tree.appendChild(mk(' + 문서 생성', '', () => createDoc(null), [], null, null));
+  tree.appendChild(mk(' + 폴더 생성', '', () => createFolder(null), [], null, null));
   renderBranch(null, tree);
 }
 
@@ -1273,6 +1277,8 @@ function updateProgress() {
   $('progress-pill').textContent = `${actualWithSpaces} / ${target}`;
   $('daily-stats').textContent = `공백 포함: ${actualWithSpaces}\n공백 제외: ${actualNoSpaces}\n집중 횟수: ${state.sessionsByDate[date] || 0}\n집중 시간: ${formatDuration(focusSec)}`;
   renderCalendar();
+  renderCalendarTable();
+  updateGoalLockUI();
 }
 
 function formatDuration(totalSeconds) {
@@ -1281,6 +1287,20 @@ function formatDuration(totalSeconds) {
   const m = Math.floor((sec % 3600) / 60);
   const s = sec % 60;
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+function isTodayGoalLocked() {
+  return !!state.goalLockedByDate[todayKey()];
+}
+
+function updateGoalLockUI() {
+  const lockBtn = $('goal-lock-btn');
+  const goalInput = $('goal-input');
+  if (!lockBtn || !goalInput) return;
+  const locked = isTodayGoalLocked();
+  goalInput.disabled = locked;
+  lockBtn.textContent = locked ? '오늘 목표 고정 해제' : '오늘 목표 고정';
+  lockBtn.title = locked ? '오늘 목표 글자수 고정을 해제합니다.' : '오늘 목표 글자수를 고정합니다.';
 }
 
 function renderCalendar() {
@@ -1304,6 +1324,47 @@ function renderCalendar() {
     el.title = `${key}\n목표 글자수: ${target}\n실제 달성(공백 포함): ${actualWithSpaces}\n실제 달성(공백 제외): ${actualNoSpaces}`;
     box.appendChild(el);
   }
+}
+
+function renderCalendarTable() {
+  const table = $('calendar-table');
+  if (!table) return;
+  table.innerHTML = '';
+
+  const thead = document.createElement('thead');
+  thead.innerHTML = '<tr><th>날짜</th><th>목표</th><th>공백 포함</th><th>공백 제외</th><th>달성</th></tr>';
+  table.appendChild(thead);
+
+  const tbody = document.createElement('tbody');
+  const now = seoulDateParts();
+  const y = now.year;
+  const m = now.month;
+  const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
+
+  for (let d = 1; d <= last; d += 1) {
+    const key = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const rec = state.progressByDate[key];
+    const target = Number((rec && rec.targetChars) || state.goalByDate[key] || 0);
+    const actualWithSpaces = Number((rec && rec.actualChars) || 0);
+    const actualNoSpaces = Number((rec && rec.actualCharsNoSpaces) || 0);
+    const achieved = target > 0 && actualWithSpaces >= target;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${key}</td><td>${target}</td><td>${actualWithSpaces}</td><td>${actualNoSpaces}</td><td>${achieved ? '달성' : '-'}</td>`;
+    tbody.appendChild(tr);
+  }
+  table.appendChild(tbody);
+}
+
+function setCalendarViewMode(mode) {
+  calendarViewMode = mode === 'table' ? 'table' : 'calendar';
+  const calendar = $('calendar');
+  const tableWrap = $('calendar-table-wrap');
+  const calendarBtn = $('calendar-view-btn');
+  const tableBtn = $('calendar-table-view-btn');
+  if (calendar) calendar.classList.toggle('hidden', calendarViewMode !== 'calendar');
+  if (tableWrap) tableWrap.classList.toggle('hidden', calendarViewMode !== 'table');
+  if (calendarBtn) calendarBtn.classList.toggle('active', calendarViewMode === 'calendar');
+  if (tableBtn) tableBtn.classList.toggle('active', calendarViewMode === 'table');
 }
 
 function switchSplit(mode) {
@@ -1345,15 +1406,9 @@ function downloadBlob(blob, name) {
 
 function renderHistory() {
   const list = $('history-list');
-  const searchInput = $('history-search');
   if (!list) return;
   list.innerHTML = '';
-  const query = ((searchInput && searchInput.value) || '').trim().toLowerCase();
-  const entries = (state.historyEntries || []).filter((h) => {
-    if (!query) return true;
-    const hay = `${h.summary || ''} ${h.docName || ''} ${h.trigger || ''}`.toLowerCase();
-    return hay.includes(query);
-  });
+  const entries = state.historyEntries || [];
   const triggerLabel = {
     'auto-10m': '자동저장(10분)',
     'manual-sync': '수동동기화',
@@ -1391,7 +1446,7 @@ function renderHistory() {
 
   if (entries.length === 0) {
     const li = document.createElement('li');
-    li.textContent = '검색 결과가 없습니다.';
+    li.textContent = '히스토리가 없습니다.';
     list.appendChild(li);
   }
 }
@@ -1439,6 +1494,8 @@ function renderAll() {
   renderTimer();
   updateProgress();
   $('goal-input').value = state.goalByDate[todayKey()] || '';
+  updateGoalLockUI();
+  setCalendarViewMode(calendarViewMode);
 }
 
 async function handleManualSync() {
@@ -1842,11 +1899,12 @@ function updatePanelToggleButtons() {
 function applyAppLayout() {
   const app = $('app');
   const sidebar = $('sidebar');
-  const resizer = $('sidebar-resizer');
+  const sidebarResizer = $('sidebar-resizer');
+  const calendarResizer = $('calendar-resizer');
   const statsPanel = document.querySelector('.stats-panel');
   const showTreeBar = $('show-tree-bar');
   const showCalendarBar = $('show-calendar-bar');
-  if (!app || !sidebar || !resizer || !statsPanel) return;
+  if (!app || !sidebar || !sidebarResizer || !calendarResizer || !statsPanel) return;
 
   const isCompact = window.innerWidth <= 1100;
   const isMobileMini = window.innerWidth <= MOBILE_MINI_BREAKPOINT;
@@ -1858,7 +1916,8 @@ function applyAppLayout() {
   document.body.classList.toggle('mobile-mini', isMobileMini);
   document.body.classList.toggle('mobile-mini-calendar-open', isMobileMini && showCalendar);
   sidebar.classList.toggle('hidden-panel', !showSidebar);
-  resizer.classList.toggle('hidden-panel', !showSidebar);
+  sidebarResizer.classList.toggle('hidden-panel', !showSidebar);
+  calendarResizer.classList.toggle('hidden-panel', !showCalendar);
   statsPanel.classList.toggle('hidden-panel', !showCalendar);
   if (showTreeBar) {
     showTreeBar.classList.toggle('hidden', isMobileMini || showSidebar);
@@ -1867,9 +1926,9 @@ function applyAppLayout() {
   }
   if (showCalendarBar) showCalendarBar.classList.toggle('hidden', isMobileMini || showCalendar || isCompact);
 
-  if (showSidebar && showCalendar) app.style.gridTemplateColumns = `${sidebarWidth}px 8px 1fr 260px`;
+  if (showSidebar && showCalendar) app.style.gridTemplateColumns = `${sidebarWidth}px 8px 1fr 8px ${calendarWidth}px`;
   else if (showSidebar && !showCalendar) app.style.gridTemplateColumns = `${sidebarWidth}px 8px 1fr`;
-  else if (!showSidebar && showCalendar) app.style.gridTemplateColumns = '1fr 260px';
+  else if (!showSidebar && showCalendar) app.style.gridTemplateColumns = `1fr 8px ${calendarWidth}px`;
   else app.style.gridTemplateColumns = '1fr';
   app.style.paddingLeft = `${leftBarSpace}px`;
   app.style.paddingRight = `${rightBarSpace}px`;
@@ -1891,9 +1950,11 @@ function bindEvents() {
   const editorA = $('editor-a');
   const editorB = $('editor-b');
   const goalInput = $('goal-input');
+  const goalLockBtn = $('goal-lock-btn');
+  const calendarViewBtn = $('calendar-view-btn');
+  const calendarTableViewBtn = $('calendar-table-view-btn');
   const historyBtn = $('history-btn');
   const historyCloseBtn = $('history-close');
-  const historySearchInput = $('history-search');
   const exportBtn = $('export-btn');
   const exportMenu = $('export-menu');
   const exportTxtBtn = $('export-txt');
@@ -1992,10 +2053,23 @@ function bindEvents() {
   if (editorB) editorB.addEventListener('input', (e) => updateEditorPane('b', e.target.value));
 
   if (goalInput) goalInput.addEventListener('change', (e) => {
+    if (isTodayGoalLocked()) {
+      e.target.value = state.goalByDate[todayKey()] || 0;
+      return;
+    }
     state.goalByDate[todayKey()] = Number(e.target.value || 0);
     saveState();
     updateProgress();
   });
+  if (goalLockBtn) goalLockBtn.onclick = () => {
+    const key = todayKey();
+    const locked = !!state.goalLockedByDate[key];
+    state.goalLockedByDate[key] = !locked;
+    saveState();
+    updateGoalLockUI();
+  };
+  if (calendarViewBtn) calendarViewBtn.onclick = () => setCalendarViewMode('calendar');
+  if (calendarTableViewBtn) calendarTableViewBtn.onclick = () => setCalendarViewMode('table');
 
   if (historyBtn) historyBtn.onclick = () => {
     renderHistory();
@@ -2006,7 +2080,6 @@ function bindEvents() {
     const dlg = $('history-dialog');
     if (dlg && typeof dlg.close === 'function') dlg.close();
   };
-  if (historySearchInput) historySearchInput.addEventListener('input', renderHistory);
 
   const closeExportMenu = () => {
     if (!exportMenu || !exportBtn) return;
@@ -2092,29 +2165,50 @@ function bindEvents() {
 }
 
 function bindSidebarResize() {
-  const handle = $('sidebar-resizer');
-  if (!handle) return;
+  const leftHandle = $('sidebar-resizer');
+  const rightHandle = $('calendar-resizer');
+  const app = $('app');
+  if (!leftHandle || !rightHandle || !app) return;
 
-  let dragging = false;
+  let draggingLeft = false;
+  let draggingRight = false;
   const saved = Number(safeGetItem('we-sidebar-width') || 240);
   if (!Number.isNaN(saved)) sidebarWidth = Math.max(180, Math.min(520, saved));
+  const savedCalendar = Number(safeGetItem('we-calendar-width') || 260);
+  if (!Number.isNaN(savedCalendar)) calendarWidth = Math.max(220, Math.min(520, savedCalendar));
 
-  handle.addEventListener('mousedown', (e) => {
+  leftHandle.addEventListener('mousedown', (e) => {
     if (!layoutPrefs.showSidebar) return;
     e.preventDefault();
-    dragging = true;
+    draggingLeft = true;
+    document.body.style.userSelect = 'none';
+  });
+  rightHandle.addEventListener('mousedown', (e) => {
+    const isCompact = window.innerWidth <= 1100;
+    if (isCompact || !layoutPrefs.showCalendar) return;
+    e.preventDefault();
+    draggingRight = true;
     document.body.style.userSelect = 'none';
   });
   window.addEventListener('mousemove', (e) => {
-    if (!dragging) return;
-    sidebarWidth = Math.max(180, Math.min(520, e.clientX));
+    if (!draggingLeft && !draggingRight) return;
+    if (draggingLeft) {
+      sidebarWidth = Math.max(180, Math.min(520, e.clientX));
+    }
+    if (draggingRight) {
+      const appRect = app.getBoundingClientRect();
+      const next = appRect.right - e.clientX;
+      calendarWidth = Math.max(220, Math.min(520, next));
+    }
     applyAppLayout();
   });
   window.addEventListener('mouseup', () => {
-    if (!dragging) return;
-    dragging = false;
+    if (!draggingLeft && !draggingRight) return;
+    draggingLeft = false;
+    draggingRight = false;
     document.body.style.userSelect = '';
     safeSetItem('we-sidebar-width', String(sidebarWidth));
+    safeSetItem('we-calendar-width', String(calendarWidth));
   });
   window.addEventListener('resize', applyAppLayout);
   applyAppLayout();

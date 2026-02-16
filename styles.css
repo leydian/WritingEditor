@@ -53,7 +53,7 @@ body {
 
 .app {
   display: grid;
-  grid-template-columns: 240px 8px 1fr 260px;
+  grid-template-columns: 240px 8px 1fr 8px 260px;
   height: 100vh;
 }
 
@@ -65,6 +65,15 @@ body {
 }
 
 .sidebar-resizer:hover { background: #1e293b; }
+
+.calendar-resizer {
+  background: #0f172a;
+  border-left: 1px solid #374151;
+  border-right: 1px solid #374151;
+  cursor: col-resize;
+}
+
+.calendar-resizer:hover { background: #1e293b; }
 
 .sidebar,
 .stats-panel {
@@ -304,6 +313,44 @@ textarea:focus { outline: none; }
 
 .calendar { display: grid; grid-template-columns: repeat(7,1fr); gap: 4px; }
 
+.calendar-view-toggle {
+  display: flex;
+  gap: 8px;
+  margin: 0 0 10px;
+}
+
+.calendar-view-toggle button.active {
+  background: #1d4ed8;
+  border-color: #2563eb;
+}
+
+.calendar-table-wrap {
+  max-height: 320px;
+  overflow: auto;
+  border: 1px solid #334155;
+  border-radius: 8px;
+}
+
+.calendar-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.calendar-table th,
+.calendar-table td {
+  border-bottom: 1px solid #334155;
+  padding: 6px 8px;
+  text-align: left;
+}
+
+.calendar-table th {
+  position: sticky;
+  top: 0;
+  background: #0f172a;
+  z-index: 1;
+}
+
 .calendar-tools {
   display: flex;
   gap: 8px;
@@ -326,7 +373,6 @@ textarea:focus { outline: none; }
 .day.hit::after { content: '●'; color: #34d399; display: block; font-size: 11px; }
 
 .pill { padding: 6px 10px; background: #1f2937; border-radius: 14px; }
-#history-search { width: 100%; margin-bottom: 8px; }
 
 .danger-dialog {
   width: min(560px, 92vw);
@@ -364,6 +410,7 @@ textarea:focus { outline: none; }
 @media (max-width: 1100px) {
   .app { grid-template-columns: 200px 8px 1fr; }
   .stats-panel { display: none; }
+  .calendar-resizer { display: none; }
 }
 
 @media (max-width: 900px) {
@@ -381,7 +428,8 @@ textarea:focus { outline: none; }
     max-height: 34vh;
   }
 
-  .sidebar-resizer { display: none !important; }
+  .sidebar-resizer,
+  .calendar-resizer { display: none !important; }
 
   .main { min-height: 66vh; }
 
@@ -453,7 +501,6 @@ textarea:focus { outline: none; }
 
   .auth-card input,
   #goal-input,
-  #history-search,
   #auth-email,
   #auth-password { width: 100%; }
 

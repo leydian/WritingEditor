@@ -74,6 +74,7 @@
       </section>
     </main>
 
+    <div id="calendar-resizer" class="calendar-resizer" aria-hidden="true"></div>
     <aside class="stats-panel">
       <section class="stats-row">
         <div class="timer-box">
@@ -101,9 +102,17 @@
       </div>
       <div class="calendar-tools">
         <input id="goal-input" type="number" min="0" placeholder="오늘 목표 글자 수" />
+        <button id="goal-lock-btn" type="button">오늘 목표 고정</button>
         <span id="progress-pill" class="pill">0 / 0</span>
       </div>
+      <div class="calendar-view-toggle">
+        <button id="calendar-view-btn" type="button">달력 보기</button>
+        <button id="calendar-table-view-btn" type="button">표 보기</button>
+      </div>
       <div id="calendar" class="calendar"></div>
+      <div id="calendar-table-wrap" class="calendar-table-wrap hidden">
+        <table id="calendar-table" class="calendar-table"></table>
+      </div>
       <p>● 목표 달성일</p>
     </aside>
   </div>
@@ -113,7 +122,6 @@
 
   <dialog id="history-dialog">
     <h3>저장 히스토리 (최대 10개)</h3>
-    <input id="history-search" type="text" placeholder="히스토리 검색 (파일명/동작)" />
     <ul id="history-list"></ul>
     <button id="history-close">닫기</button>
   </dialog>
@@ -156,7 +164,7 @@
   </dialog>
 
   <script src="error-utils.js?v=1"></script>
-  <script src="app.js?v=58"></script>
+  <script src="app.js?v=59"></script>
 </body>
 </html>
 
