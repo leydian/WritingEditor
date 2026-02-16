@@ -15,6 +15,7 @@ const WITHDRAW_CONFIRM_TEXT = '회원탈퇴';
 const EMBEDDED_SUPABASE_URL = 'https://rvrysnatyimuilarxfft.supabase.co';
 const EMBEDDED_SUPABASE_ANON = 'sb_publishable_v_aVOb5bAPP3pr1dF7POBQ_qnxCWVho';
 const stateUtils = (typeof StateUtils !== 'undefined' && StateUtils) ? StateUtils : null;
+const cryptoUtils = (typeof CryptoUtils !== 'undefined' && CryptoUtils) ? CryptoUtils : null;
 
 function seoulDateParts(date = new Date()) {
   const parts = new Intl.DateTimeFormat('en-CA', {
@@ -55,6 +56,10 @@ let mobileMiniSidebarOpen = false;
 let mobileMiniCalendarOpen = false;
 let calendarViewMode = 'calendar';
 let editorSplitDragging = false;
+let encryptionPasswordCache = '';
+let pendingAuthPassword = '';
+let pendingEncryptedLocalState = null;
+let localEncryptedWriteSeq = 0;
 const dirtyDocIds = new Set();
 const layoutPrefs = loadLayoutPrefs();
 
@@ -198,14 +203,62 @@ function normalizeState(raw) {
 function loadState() {
   try {
     const saved = JSON.parse(safeGetItem(KEY) || 'null');
+    if (canUseDataEncryption() && cryptoUtils.isEncryptedEnvelope(saved)) {
+      pendingEncryptedLocalState = saved;
+      return defaultState();
+    }
     return normalizeState(saved);
   } catch (_error) {
     return defaultState();
   }
 }
 
+function canUseDataEncryption() {
+  return !!(
+    cryptoUtils
+    && typeof cryptoUtils.encryptValue === 'function'
+    && typeof cryptoUtils.decryptValue === 'function'
+    && typeof cryptoUtils.isEncryptedEnvelope === 'function'
+    && globalThis.crypto
+    && globalThis.crypto.subtle
+  );
+}
+
+function encryptionRequiredForUser(user) {
+  return !!(user && !isAnonymousUser(user));
+}
+
+function shouldEncryptCurrentState() {
+  return !!(
+    encryptionRequiredForUser(supabaseUser)
+    && canUseDataEncryption()
+    && encryptionPasswordCache
+  );
+}
+
+function persistEncryptedLocalState(nextStateSnapshot) {
+  if (!shouldEncryptCurrentState()) return;
+  const seq = ++localEncryptedWriteSeq;
+  cryptoUtils.encryptValue(nextStateSnapshot, encryptionPasswordCache).then((envelope) => {
+    if (seq !== localEncryptedWriteSeq) return;
+    if (!safeSetItem(KEY, JSON.stringify(envelope))) {
+      setAuthStatus('로컬 암호화 저장 실패: 브라우저 저장소를 확인하세요.');
+    }
+  }).catch((error) => {
+    const msg = error && error.message ? error.message : '알 수 없는 오류';
+    setAuthStatus(`로컬 암호화 저장 실패: ${msg}`);
+  });
+}
+
 function saveState(options = {}) {
-  if (!safeSetItem(KEY, JSON.stringify(state))) {
+  if (encryptionRequiredForUser(supabaseUser) && canUseDataEncryption() && !encryptionPasswordCache) {
+    setAuthStatus('암호화 잠금 해제 필요: 로그인 비밀번호를 다시 입력하세요.');
+    return;
+  }
+  if (shouldEncryptCurrentState()) {
+    const snapshot = JSON.parse(JSON.stringify(state));
+    persistEncryptedLocalState(snapshot);
+  } else if (!safeSetItem(KEY, JSON.stringify(state))) {
     setAuthStatus('로컬 저장 실패: 브라우저 저장소를 확인하세요.');
     return;
   }
@@ -230,6 +283,8 @@ function clearLocalEditorData() {
   } catch (_error) {
     // noop
   }
+  pendingEncryptedLocalState = null;
+  localEncryptedWriteSeq += 1;
 }
 
 function loadSupabaseConfig() {
@@ -290,6 +345,41 @@ function isAnonymousUser(user) {
   if (user.is_anonymous === true) return true;
   const provider = user.app_metadata && user.app_metadata.provider;
   return provider === 'anonymous';
+}
+
+async function ensureEncryptionUnlocked(user) {
+  if (!encryptionRequiredForUser(user)) {
+    encryptionPasswordCache = '';
+    pendingAuthPassword = '';
+    return true;
+  }
+  if (!canUseDataEncryption()) {
+    setAuthStatus('이 브라우저는 데이터 암호화를 지원하지 않습니다.');
+    return false;
+  }
+  if (encryptionPasswordCache) return true;
+
+  const candidate = pendingAuthPassword || prompt('데이터 암호 해제를 위해 로그인 비밀번호를 입력하세요.');
+  pendingAuthPassword = '';
+  if (!candidate) {
+    setAuthStatus('암호화 잠금 해제를 취소했습니다.');
+    return false;
+  }
+  encryptionPasswordCache = candidate;
+  return true;
+}
+
+async function tryHydratePendingEncryptedLocalState() {
+  if (!pendingEncryptedLocalState || !encryptionPasswordCache || !canUseDataEncryption()) return;
+  try {
+    const decrypted = await cryptoUtils.decryptValue(pendingEncryptedLocalState, encryptionPasswordCache);
+    replaceState(decrypted);
+    pendingEncryptedLocalState = null;
+    renderAll();
+  } catch (error) {
+    const msg = error && error.message ? error.message : '알 수 없는 오류';
+    setAuthStatus(`로컬 암호화 데이터 복호화 실패: ${msg}`);
+  }
 }
 
 function createSupabaseCompatClient(url, anon) {
@@ -775,9 +865,27 @@ async function pushRemoteState() {
   }
 
   setSyncStatus('클라우드 동기화 중…', 'pending');
+  let statePayload = JSON.parse(JSON.stringify(state));
+  if (encryptionRequiredForUser(supabaseUser)) {
+    if (!canUseDataEncryption()) {
+      setSyncStatus('동기화 중단: 이 브라우저는 데이터 암호화를 지원하지 않습니다.', 'error');
+      return false;
+    }
+    if (!encryptionPasswordCache) {
+      setSyncStatus('동기화 중단: 암호화 잠금 해제가 필요합니다.', 'error');
+      return false;
+    }
+    try {
+      statePayload = await cryptoUtils.encryptValue(statePayload, encryptionPasswordCache);
+    } catch (error) {
+      const msg = error && error.message ? error.message : '알 수 없는 오류';
+      setSyncStatus(`동기화 중단: 암호화 실패 (${msg})`, 'error');
+      return false;
+    }
+  }
   const payload = {
     user_id: supabaseUser.id,
-    state_json: JSON.parse(JSON.stringify(state)),
+    state_json: statePayload,
     updated_at: new Date().toISOString(),
   };
 
@@ -814,14 +922,33 @@ async function pullRemoteState() {
   }
 
   if (data && data.state_json) {
+    let nextState = data.state_json;
+    const encrypted = canUseDataEncryption() && cryptoUtils.isEncryptedEnvelope(nextState);
+    if (encrypted) {
+      if (!encryptionPasswordCache) {
+        setSyncStatus('암호화 데이터 잠김: 로그인 비밀번호를 다시 입력하세요.', 'error');
+        return;
+      }
+      try {
+        nextState = await cryptoUtils.decryptValue(nextState, encryptionPasswordCache);
+      } catch (error) {
+        const msg = error && error.message ? error.message : '알 수 없는 오류';
+        setSyncStatus(`클라우드 복호화 실패: ${msg}`, 'error');
+        return;
+      }
+    }
     hydratingRemoteState = true;
-    replaceState(data.state_json);
+    replaceState(nextState);
     saveState({ skipRemote: true });
     hydratingRemoteState = false;
     renderAll();
     lastKnownRemoteUpdatedAt = data.updated_at || null;
     safeSetItem(LAST_USER_KEY, String(supabaseUser.id || ''));
     setSyncStatus(`클라우드 상태 불러옴 (${new Date(data.updated_at).toLocaleString()})`, 'ok');
+    if (encryptionRequiredForUser(supabaseUser) && !encrypted) {
+      setSyncStatus('평문 클라우드 상태 감지: 암호화로 마이그레이션 중…', 'pending');
+      await pushRemoteState();
+    }
     return;
   }
 
@@ -838,12 +965,22 @@ async function pullRemoteState() {
 
 async function handleSignedIn(user) {
   supabaseUser = user;
+  const unlocked = await ensureEncryptionUnlocked(user);
+  if (!unlocked) {
+    if (supabase && supabase.auth && typeof supabase.auth.signOut === 'function') {
+      await supabase.auth.signOut();
+    }
+    return;
+  }
+  await tryHydratePendingEncryptedLocalState();
   applyAuthState(user);
   await pullRemoteState();
 }
 
 function handleSignedOut() {
   supabaseUser = null;
+  encryptionPasswordCache = '';
+  pendingAuthPassword = '';
   lastKnownRemoteUpdatedAt = null;
   dirtyDocIds.clear();
   if (autoSyncTimer) {
@@ -1919,7 +2056,9 @@ async function authLogin() {
   }
   const email = $('auth-email').value.trim();
   const password = $('auth-password').value;
+  pendingAuthPassword = password || '';
   const { error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) pendingAuthPassword = '';
   setAuthStatus(error ? error.message : '로그인 성공');
 }
 
@@ -1928,6 +2067,7 @@ async function authAnonymousLogin() {
     setAuthStatus('익명 로그인 사용 불가: Supabase Anonymous provider 설정을 확인하세요.');
     return;
   }
+  pendingAuthPassword = '';
   const { error } = await supabase.auth.signInAnonymously();
   setAuthStatus(error ? `익명 로그인 실패: ${error.message}` : '익명 로그인 성공');
 }
@@ -1971,12 +2111,14 @@ async function upgradeAnonymousAccount() {
     showUiError('upgrade', error, { auth: true, sync: false, logContext: 'account upgrade failed' });
     return;
   }
+  pendingAuthPassword = password || '';
   const signInResult = await supabase.auth.signInWithPassword({ email, password });
   closeUpgradeDialog();
   if (!signInResult || !signInResult.error) {
     setAuthStatus('회원가입 완료: 자동 로그인되었습니다.');
     return;
   }
+  pendingAuthPassword = '';
 
   const msg = String(signInResult.error.message || '');
   if (msg.toLowerCase().includes('confirm') || msg.toLowerCase().includes('verified')) {
