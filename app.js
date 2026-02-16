@@ -100,7 +100,6 @@ function defaultState() {
     sessionsByDate: {},
     focusSecondsByDate: {},
     historyEntries: [],
-    historyByDoc: {},
     pomodoro: { mode: 'focus', left: 25 * 60, running: false },
   };
 }
@@ -118,6 +117,8 @@ function normalizeState(raw) {
   if (!Array.isArray(merged.docs)) merged.docs = base.docs;
   if (!Array.isArray(merged.folders)) merged.folders = [];
   if (!Array.isArray(merged.historyEntries)) merged.historyEntries = [];
+  // Drop deprecated state key from older snapshots.
+  if (Object.prototype.hasOwnProperty.call(merged, 'historyByDoc')) delete merged.historyByDoc;
   if (!merged.sessionsByDate || typeof merged.sessionsByDate !== 'object') merged.sessionsByDate = {};
   if (!merged.focusSecondsByDate || typeof merged.focusSecondsByDate !== 'object') merged.focusSecondsByDate = {};
   merged.folders = merged.folders.map((f) => ({
@@ -214,6 +215,40 @@ function getEffectiveSupabaseConfig() {
 
 function makeError(message, status = 0) {
   return { message, status };
+}
+
+function getErrorMessage(errorLike) {
+  return String((errorLike && errorLike.message) || errorLike || '').trim();
+}
+
+function isLikelyNetworkError(errorLike) {
+  const msg = getErrorMessage(errorLike).toLowerCase();
+  return msg.includes('network') || msg.includes('fetch') || msg.includes('failed to fetch') || msg.includes('timeout');
+}
+
+function buildSyncFailureMessage(errorLike) {
+  if (isLikelyNetworkError(errorLike)) {
+    return '동기화 실패: 네트워크 연결을 확인할 수 없습니다. 연결 후 다시 시도하세요.';
+  }
+  return '동기화 실패: 서버 저장에 실패했습니다. 잠시 후 다시 시도하세요.';
+}
+
+function buildUpgradeFailureMessage(errorLike) {
+  const msg = getErrorMessage(errorLike).toLowerCase();
+  if (msg.includes('email') || msg.includes('invalid')) {
+    return '계정 전환 실패: 입력한 이메일 형식을 확인하세요.';
+  }
+  if (msg.includes('confirm') || msg.includes('verified')) {
+    return '계정 전환 실패: 인증 정책으로 즉시 로그인이 제한되었습니다. 이메일 인증 후 다시 로그인하세요.';
+  }
+  return '계정 전환 실패: 서버 요청이 완료되지 않았습니다. 잠시 후 다시 시도하세요.';
+}
+
+function buildWithdrawFailureMessage(errorLike) {
+  if (isLikelyNetworkError(errorLike)) {
+    return '회원 탈퇴 실패: 서버 요청이 완료되지 않았습니다. 잠시 후 다시 시도하세요.';
+  }
+  return '회원 탈퇴 실패: 계정 확인에 실패했습니다. 이메일과 비밀번호를 다시 확인하세요.';
 }
 
 function isAnonymousUser(user) {
@@ -649,7 +684,8 @@ async function pushRemoteState() {
 
   const { error } = await supabase.from('editor_states').upsert(payload, { onConflict: 'user_id' });
   if (error) {
-    setSyncStatus(`동기화 실패: ${error.message}`, 'error');
+    console.error('sync upsert failed', error);
+    setSyncStatus(buildSyncFailureMessage(error), 'error');
     return false;
   }
   lastSyncAt = Date.now();
@@ -668,7 +704,8 @@ async function pullRemoteState() {
     .maybeSingle();
 
   if (error) {
-    setSyncStatus(`원격 불러오기 실패: ${error.message}`, 'error');
+    console.error('sync pull failed', error);
+    setSyncStatus(buildSyncFailureMessage(error), 'error');
     return;
   }
 
@@ -982,7 +1019,6 @@ function deleteDoc(docId) {
   }, cloneStateForHistory());
 
   state.docs = state.docs.filter((d) => d.id !== docId);
-  delete state.historyByDoc[docId];
   dirtyDocIds.delete(docId);
 
   if (state.activeDocA === docId) state.activeDocA = null;
@@ -1010,7 +1046,6 @@ function deleteFolder(folderId) {
   state.folders = state.folders.filter((f) => !folderIds.includes(f.id));
   state.docs = state.docs.filter((d) => !folderIds.includes(d.folderId));
   docsInFolders.forEach((d) => {
-    delete state.historyByDoc[d.id];
     dirtyDocIds.delete(d.id);
   });
 
@@ -1484,7 +1519,8 @@ async function upgradeAnonymousAccount() {
 
   const { error } = await supabase.auth.updateUser({ email, password });
   if (error) {
-    setAuthStatus(`회원가입 전환 실패: ${error.message}`);
+    console.error('account upgrade failed', error);
+    setAuthStatus(buildUpgradeFailureMessage(error));
     return;
   }
   const signInResult = await supabase.auth.signInWithPassword({ email, password });
@@ -1499,7 +1535,8 @@ async function upgradeAnonymousAccount() {
     setAuthStatus('회원가입 전환 완료. 이메일 인증 후 자동 로그인됩니다.');
     return;
   }
-  setAuthStatus(`회원가입 전환 완료, 자동 로그인 실패: ${msg}`);
+  console.error('account upgrade auto sign-in failed', signInResult.error);
+  setAuthStatus(buildUpgradeFailureMessage(signInResult.error));
 }
 
 async function authLogout() {
@@ -1626,8 +1663,10 @@ async function executeAccountDeletionFlow(user, options = {}) {
     }
   }
   if (deletedState && deletedState.error) {
-    setSyncStatus(`탈퇴 실패: ${deletedState.error.message}`, 'error');
-    setAuthStatus(`탈퇴 실패(데이터 삭제): ${deletedState.error.message}`);
+    console.error('withdraw deleteRemoteState failed', deletedState.error);
+    const message = buildWithdrawFailureMessage(deletedState.error);
+    setSyncStatus(message, 'error');
+    setAuthStatus(message);
     return false;
   }
 
@@ -1639,10 +1678,12 @@ async function executeAccountDeletionFlow(user, options = {}) {
     }
   }
   if (deletedAccount && deletedAccount.error) {
-    setSyncStatus(`탈퇴 실패: ${deletedAccount.error.message}`, 'error');
-    setAuthStatus(`탈퇴 실패(계정 삭제): ${deletedAccount.error.message}`);
+    console.error('withdraw delete account rpc failed', deletedAccount.error);
+    const message = '회원 탈퇴 실패: 서버 요청이 완료되지 않았습니다. 잠시 후 다시 시도하세요.';
+    setSyncStatus(message, 'error');
+    setAuthStatus(message);
     if ((deletedAccount.error.message || '').includes('delete_my_account')) {
-      alert('탈퇴 함수(delete_my_account)가 Supabase에 없습니다. SQL Editor에서 함수를 먼저 생성해야 합니다.');
+      alert('회원 탈퇴 실패: 서버 설정이 완료되지 않았습니다. 관리자에게 문의하세요.');
     }
     return false;
   }
@@ -1688,7 +1729,8 @@ async function authWithdraw() {
     setAuthStatus('탈퇴 계정 확인을 위해 재로그인 중...');
     const signInResult = await supabase.auth.signInWithPassword({ email: inputEmail, password: inputPassword });
     if (signInResult && signInResult.error) {
-      setAuthStatus(`재로그인 실패: ${signInResult.error.message}`);
+      console.error('withdraw re-auth failed', signInResult.error);
+      setAuthStatus(buildWithdrawFailureMessage(signInResult.error));
       setSyncStatus('탈퇴 중단: 계정 확인 실패', 'error');
       return;
     }
