@@ -257,6 +257,7 @@ node .\scripts\security-preflight-check.js
 
 ## 8. 참고 문서
 
+- 작업 이력 인덱스: `docs/WORKLOG_INDEX.md`
 - 암호화 운영: `docs/ENCRYPTION_RUNBOOK.md`
 - 동기화 회귀: `docs/SYNC_REGRESSION_CHECKLIST.md`
 - 진행 요약: `docs/PROGRESS_SUMMARY_2026-02-16.md`
