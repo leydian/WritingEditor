@@ -5,8 +5,8 @@
 기준 경로: `C:\dlatl\WritingEditor`  
 기준 브랜치: `main`  
 원격 저장소: `https://github.com/leydian/WritingEditor`  
-현재 앱 버전: `index.html` -> `app.js?v=74`  
-현재 스타일 버전: `index.html` -> `styles.css?v=2`
+현재 앱 버전: `index.html` -> `app.js?v=76`  
+현재 스타일 버전: `index.html` -> `styles.css?v=7`
 
 ## 1. 문서 목적 / 운영 원칙
 
@@ -43,11 +43,16 @@
 - 로컬 상태(`localStorage`) + Supabase `editor_states` 원격 동기화
 - 수동 동기화 버튼(`지금 동기화`) + 자동 동기화
 - 계정 전환 시 stale 로컬 업로드 방지
+- 자동 동기화 실패 시 지수 백오프 재시도(최대 3회)
 - **P0 적용 완료**: 일반 로그아웃 직전 강제 동기화 시도, 실패 시 로그아웃 강행 여부 확인
 - **P1 적용 완료**:
   - push 전 세션 신선도 확인(`ensureFreshAuthSession`)
   - 원격 `updated_at` 기반 충돌 감지 후 덮어쓰기 확인
   - fallback(compat client) `refreshSession()` 구현
+- **P2 적용 완료**:
+  - 일반 계정 데이터 암호화(로그인 비밀번호 기반, AES-GCM)
+  - 익명 계정은 암호화 미적용 정책 유지
+  - 암호 해제 전용 모달 도입(`prompt` 제거)
 
 ### 2.3 에디터 / 히스토리
 
@@ -129,7 +134,7 @@ node .\scripts\security-preflight-check.js
 
 - CSP: OK
 - 동적 `document.write`: OK
-- 템플릿 `innerHTML`: 경고 1건(기능상 즉시 문제는 없으나 DOM API 전환 권장)
+- 템플릿 `innerHTML`: OK
 
 ---
 
@@ -158,12 +163,14 @@ node .\scripts\security-preflight-check.js
 - 오류 유틸: `error-utils.js`
 - 상태 유틸: `state-utils.js`
 - 테스트:
+  - `tests/crypto-utils.test.js`
   - `tests/error-utils.test.js`
   - `tests/state-utils.test.js`
 
 실행:
 
 ```bash
+node .\tests\crypto-utils.test.js
 node .\tests\error-utils.test.js
 node .\tests\state-utils.test.js
 ```
@@ -172,7 +179,7 @@ node .\tests\state-utils.test.js
 
 ## 5. Supabase 운영 기준
 
-1. 앱은 내장 URL/Anon 설정을 사용한다.
+1. 앱은 저장된 설정 또는 배포 주입 설정(`__WE_SUPABASE_URL__`, `__WE_SUPABASE_ANON__`)을 사용한다.
 2. 보안은 RLS 정책으로 통제한다.
 3. 탈퇴 RPC 함수: `delete_my_account_rpc_v3` (인자 없음)
 
@@ -267,6 +274,7 @@ $$;
 3. 아래 검증 명령 실행
 
 ```bash
+node .\tests\crypto-utils.test.js
 node .\tests\error-utils.test.js
 node .\tests\state-utils.test.js
 node .\scripts\security-preflight-check.js
@@ -274,19 +282,21 @@ node .\scripts\security-preflight-check.js
 
 ### 8.2 우선순위 백로그
 
-1. `renderCalendarTable`의 템플릿 `innerHTML` -> DOM API 전환 (보안 경고 해소)
+1. 암호화 UX 개선:
+   - 비밀번호 변경 직후 재암호화 안내/복구 플로우
+   - 잠금 상태 오류 메시지 고도화
 2. 동기화 충돌 UX 개선:
    - 현재 confirm 기반 -> 명시적 선택 모달(원격 유지/로컬 덮어쓰기)
 3. 모바일 단말 회귀:
    - iPhone Safari TXT 저장 플로우
    - Android Chrome TXT/PDF
-4. 동기화 회귀 테스트 시나리오 문서화:
+4. 동기화 회귀 테스트 주기 실행:
    - 다중기기 동시 수정 충돌
    - 로그아웃 직전 동기화 실패 분기
 
 ### 8.3 리스크 (현재 잔여)
 
-- 템플릿 `innerHTML` 경고 1건(즉시 취약점은 아니나 정책상 개선 필요)
+- 일반 계정은 복호화에 로그인 비밀번호가 필요(비밀번호 분실 시 데이터 접근 불가)
 - `localStorage` 중심 구조 특성상 XSS 발생 시 민감도 상승
 - 모바일 브라우저별 다운로드 정책 차이로 실단말 회귀 필요
 
@@ -303,6 +313,8 @@ node .\scripts\security-preflight-check.js
 2. 로그아웃 직전 동기화 실패 시 취소/강행 분기
 3. 뽀모도로 시간 설정 반영(집중/휴식 전환 시 분값 적용)
 4. 숫자 포맷 표기 일관성(진행률/오늘기록/달력툴팁/표)
+5. 일반 계정 암호화 라운드트립(저장/새로고침/재로그인)
+6. 익명 계정 비암호화 경로 유지
 
 ---
 

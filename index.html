@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://unpkg.com; connect-src 'self' https://*.supabase.co; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'" />
   <title>WritingEditor Prototype</title>
-  <link rel="stylesheet" href="styles.css?v=6" />
+  <link rel="stylesheet" href="styles.css?v=7" />
 </head>
 <body>
   <div id="auth-gate" class="auth-gate">
@@ -178,10 +178,20 @@
     </div>
   </dialog>
 
+  <dialog id="encryption-unlock-dialog" class="security-dialog">
+    <h3>데이터 암호 해제</h3>
+    <p id="encryption-unlock-copy">데이터 암호 해제를 위해 로그인 비밀번호를 입력하세요.</p>
+    <input id="encryption-unlock-password" type="password" autocomplete="current-password" placeholder="로그인 비밀번호" />
+    <div class="danger-actions">
+      <button id="encryption-unlock-cancel-btn" type="button">취소</button>
+      <button id="encryption-unlock-confirm-btn" type="button">해제</button>
+    </div>
+  </dialog>
+
   <script src="crypto-utils.js?v=1"></script>
   <script src="state-utils.js?v=1"></script>
   <script src="error-utils.js?v=1"></script>
-  <script src="app.js?v=75"></script>
+  <script src="app.js?v=76"></script>
 </body>
 </html>
 

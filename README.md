@@ -19,6 +19,7 @@
 2. 아래 검증 실행
 
 ```bash
+node .\tests\crypto-utils.test.js
 node .\tests\error-utils.test.js
 node .\tests\state-utils.test.js
 node .\scripts\security-preflight-check.js
@@ -26,7 +27,7 @@ node .\scripts\security-preflight-check.js
 
 ## 현재 우선순위
 
-1. `renderCalendarTable`의 템플릿 `innerHTML` 제거(DOM API 전환)
+1. 암호화 잠금 해제 UX 고도화(비밀번호 변경/잠금 만료 플로우)
 2. 동기화 충돌 UX 개선(confirm -> 명시적 선택 UI)
 3. 모바일 실단말 회귀(iOS Safari, Android Chrome)
-4. 동기화 회귀 테스트 시나리오 문서화
+4. 런북/회귀 체크리스트 주기 점검

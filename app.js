@@ -4,7 +4,10 @@ const KEY = 'we-proto-state-v1';
 const SB_KEY = 'we-supabase-config-v1';
 const LAYOUT_KEY = 'we-layout-prefs-v1';
 const LAST_USER_KEY = 'we-last-user-id';
+const ENCRYPTION_MIGRATION_KEY = 'we-encryption-migrated-v1';
 const AUTO_SYNC_INTERVAL_MS = 30 * 60 * 1000;
+const AUTO_SYNC_RETRY_BASE_MS = 15 * 1000;
+const AUTO_SYNC_RETRY_MAX = 3;
 const HISTORY_AUTO_SAVE_MS = 10 * 60 * 1000;
 const SUPABASE_SDK_URLS = [
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js',
@@ -12,8 +15,12 @@ const SUPABASE_SDK_URLS = [
 ];
 const MOBILE_MINI_BREAKPOINT = 900;
 const WITHDRAW_CONFIRM_TEXT = '회원탈퇴';
-const EMBEDDED_SUPABASE_URL = 'https://rvrysnatyimuilarxfft.supabase.co';
-const EMBEDDED_SUPABASE_ANON = 'sb_publishable_v_aVOb5bAPP3pr1dF7POBQ_qnxCWVho';
+const EMBEDDED_SUPABASE_URL = (typeof globalThis !== 'undefined' && globalThis.__WE_SUPABASE_URL__)
+  ? String(globalThis.__WE_SUPABASE_URL__).trim()
+  : '';
+const EMBEDDED_SUPABASE_ANON = (typeof globalThis !== 'undefined' && globalThis.__WE_SUPABASE_ANON__)
+  ? String(globalThis.__WE_SUPABASE_ANON__).trim()
+  : '';
 const stateUtils = (typeof StateUtils !== 'undefined' && StateUtils) ? StateUtils : null;
 const cryptoUtils = (typeof CryptoUtils !== 'undefined' && CryptoUtils) ? CryptoUtils : null;
 
@@ -45,6 +52,7 @@ let activePane = 'a';
 let sidebarWidth = 240;
 let calendarWidth = 260;
 let autoSyncTimer = null;
+let autoSyncRetryCount = 0;
 let lastSyncAt = 0;
 let historyAutoTimer = null;
 let hydratingRemoteState = false;
@@ -60,6 +68,7 @@ let encryptionPasswordCache = '';
 let pendingAuthPassword = '';
 let pendingEncryptedLocalState = null;
 let localEncryptedWriteSeq = 0;
+let encryptionUnlockResolver = null;
 const dirtyDocIds = new Set();
 const layoutPrefs = loadLayoutPrefs();
 
@@ -243,7 +252,9 @@ function persistEncryptedLocalState(nextStateSnapshot) {
     if (seq !== localEncryptedWriteSeq) return;
     if (!safeSetItem(KEY, JSON.stringify(envelope))) {
       setAuthStatus('로컬 암호화 저장 실패: 브라우저 저장소를 확인하세요.');
+      return;
     }
+    if (supabaseUser && supabaseUser.id) markEncryptionMigrated(supabaseUser.id);
   }).catch((error) => {
     const msg = error && error.message ? error.message : '알 수 없는 오류';
     setAuthStatus(`로컬 암호화 저장 실패: ${msg}`);
@@ -293,6 +304,24 @@ function loadSupabaseConfig() {
   } catch (_error) {
     return null;
   }
+}
+
+function loadEncryptionMigrationMap() {
+  try {
+    const raw = JSON.parse(safeGetItem(ENCRYPTION_MIGRATION_KEY) || '{}');
+    return raw && typeof raw === 'object' ? raw : {};
+  } catch (_error) {
+    return {};
+  }
+}
+
+function markEncryptionMigrated(userId) {
+  if (!userId) return;
+  const next = loadEncryptionMigrationMap();
+  next[userId] = {
+    migratedAt: new Date().toISOString(),
+  };
+  safeSetItem(ENCRYPTION_MIGRATION_KEY, JSON.stringify(next));
 }
 
 function getEmbeddedSupabaseConfig() {
@@ -347,6 +376,39 @@ function isAnonymousUser(user) {
   return provider === 'anonymous';
 }
 
+function openEncryptionUnlockDialog(message = '데이터 암호 해제를 위해 로그인 비밀번호를 입력하세요.') {
+  const dlg = $('encryption-unlock-dialog');
+  const copy = $('encryption-unlock-copy');
+  const input = $('encryption-unlock-password');
+  if (!dlg || !input || typeof dlg.showModal !== 'function') return false;
+  if (copy) copy.textContent = message;
+  input.value = '';
+  if (typeof dlg.showModal === 'function') dlg.showModal();
+  setTimeout(() => input.focus(), 0);
+  return true;
+}
+
+function closeEncryptionUnlockDialog() {
+  const dlg = $('encryption-unlock-dialog');
+  if (!dlg || typeof dlg.close !== 'function') return;
+  dlg.close();
+}
+
+function settleEncryptionUnlockResolver(value) {
+  if (!encryptionUnlockResolver) return;
+  const resolve = encryptionUnlockResolver;
+  encryptionUnlockResolver = null;
+  resolve(value || '');
+}
+
+async function requestEncryptionPassword() {
+  const opened = openEncryptionUnlockDialog();
+  if (!opened) return '';
+  return new Promise((resolve) => {
+    encryptionUnlockResolver = resolve;
+  });
+}
+
 async function ensureEncryptionUnlocked(user) {
   if (!encryptionRequiredForUser(user)) {
     encryptionPasswordCache = '';
@@ -359,7 +421,7 @@ async function ensureEncryptionUnlocked(user) {
   }
   if (encryptionPasswordCache) return true;
 
-  const candidate = pendingAuthPassword || prompt('데이터 암호 해제를 위해 로그인 비밀번호를 입력하세요.');
+  const candidate = pendingAuthPassword || await requestEncryptionPassword();
   pendingAuthPassword = '';
   if (!candidate) {
     setAuthStatus('암호화 잠금 해제를 취소했습니다.');
@@ -823,11 +885,30 @@ function queueRemoteSync() {
 
   autoSyncTimer = setTimeout(async () => {
     autoSyncTimer = null;
-    await pushRemoteState();
+    const ok = await pushRemoteState({ reason: 'auto', allowRetry: true });
+    if (!ok) scheduleAutoSyncRetry();
   }, delay);
 }
 
-async function pushRemoteState() {
+function scheduleAutoSyncRetry() {
+  if (autoSyncTimer) return;
+  if (autoSyncRetryCount >= AUTO_SYNC_RETRY_MAX) {
+    setSyncStatus('자동 동기화 재시도 한도 초과: 수동 동기화를 실행하세요.', 'error');
+    return;
+  }
+  autoSyncRetryCount += 1;
+  const retryDelay = AUTO_SYNC_RETRY_BASE_MS * Math.pow(2, autoSyncRetryCount - 1);
+  const sec = Math.round(retryDelay / 1000);
+  setSyncStatus(`자동 동기화 재시도 예정 (${sec}초 후, ${autoSyncRetryCount}/${AUTO_SYNC_RETRY_MAX})`, 'pending');
+  autoSyncTimer = setTimeout(async () => {
+    autoSyncTimer = null;
+    const ok = await pushRemoteState({ reason: 'auto-retry', allowRetry: true });
+    if (!ok) scheduleAutoSyncRetry();
+  }, retryDelay);
+}
+
+async function pushRemoteState(options = {}) {
+  const allowRetry = options.allowRetry !== false;
   if (!supabase || !supabaseUser || hydratingRemoteState) {
     setSyncStatus('로그인 필요', 'idle');
     return false;
@@ -892,11 +973,16 @@ async function pushRemoteState() {
   const { error } = await supabase.from('editor_states').upsert(payload, { onConflict: 'user_id' });
   if (error) {
     showUiError('sync', error, { auth: false, sync: true, logContext: 'sync upsert failed' });
+    if (!allowRetry) autoSyncRetryCount = 0;
     return false;
   }
   lastSyncAt = Date.now();
+  autoSyncRetryCount = 0;
   lastKnownRemoteUpdatedAt = payload.updated_at;
   setSyncStatus(`클라우드 동기화 완료 (${new Date().toLocaleTimeString()})`, 'ok');
+  if (supabaseUser && supabaseUser.id && encryptionRequiredForUser(supabaseUser) && shouldEncryptCurrentState()) {
+    markEncryptionMigrated(supabaseUser.id);
+  }
   return true;
 }
 
@@ -947,7 +1033,7 @@ async function pullRemoteState() {
     setSyncStatus(`클라우드 상태 불러옴 (${new Date(data.updated_at).toLocaleString()})`, 'ok');
     if (encryptionRequiredForUser(supabaseUser) && !encrypted) {
       setSyncStatus('평문 클라우드 상태 감지: 암호화로 마이그레이션 중…', 'pending');
-      await pushRemoteState();
+      await pushRemoteState({ reason: 'migration', allowRetry: false });
     }
     return;
   }
@@ -960,7 +1046,7 @@ async function pullRemoteState() {
     renderAll();
   }
   safeSetItem(LAST_USER_KEY, String(supabaseUser.id || ''));
-  await pushRemoteState();
+  await pushRemoteState({ reason: 'pull-empty-seed', allowRetry: false });
 }
 
 async function handleSignedIn(user) {
@@ -981,6 +1067,8 @@ function handleSignedOut() {
   supabaseUser = null;
   encryptionPasswordCache = '';
   pendingAuthPassword = '';
+  settleEncryptionUnlockResolver('');
+  closeEncryptionUnlockDialog();
   lastKnownRemoteUpdatedAt = null;
   dirtyDocIds.clear();
   if (autoSyncTimer) {
@@ -994,7 +1082,10 @@ function handleSignedOut() {
 
 async function setupSupabase() {
   const config = getEffectiveSupabaseConfig();
-  if (!config || !config.url || !config.anon) return false;
+  if (!config || !config.url || !config.anon) {
+    setAuthStatus('Supabase 설정이 없습니다. 관리자 설정 주입 또는 설정 저장을 완료하세요.');
+    return false;
+  }
   saveSupabaseConfig(config.url, config.anon);
   const sdkReady = await ensureSupabaseSdkLoaded();
   if (sdkReady && window.supabase && window.supabase.createClient) {
@@ -2035,7 +2126,8 @@ function renderAll() {
 
 async function handleManualSync() {
   flushHistorySnapshots('manual-sync', { includeFullSync: true, onlyFullSync: true });
-  await pushRemoteState();
+  autoSyncRetryCount = 0;
+  await pushRemoteState({ reason: 'manual', allowRetry: false });
 }
 
 async function authSignUp() {
@@ -2150,7 +2242,7 @@ async function authLogout() {
     clearTimeout(autoSyncTimer);
     autoSyncTimer = null;
   }
-  const synced = await pushRemoteState();
+  const synced = await pushRemoteState({ reason: 'logout', allowRetry: false });
   if (!synced) {
     const proceed = confirm('마지막 동기화에 실패했습니다. 지금 로그아웃하면 최근 변경이 다른 기기에 반영되지 않을 수 있습니다. 그래도 로그아웃할까요?');
     if (!proceed) {
@@ -2532,6 +2624,10 @@ function bindEvents() {
   const withdrawText = $('withdraw-confirm-text');
   const withdrawEmail = $('withdraw-email');
   const withdrawPassword = $('withdraw-password');
+  const encryptionUnlockDialog = $('encryption-unlock-dialog');
+  const encryptionUnlockPassword = $('encryption-unlock-password');
+  const encryptionUnlockConfirmBtn = $('encryption-unlock-confirm-btn');
+  const encryptionUnlockCancelBtn = $('encryption-unlock-cancel-btn');
   const syncNowBtn = $('sync-now-btn');
 
   if (splitVerticalBtn) splitVerticalBtn.onclick = () => switchSplit('vertical');
@@ -2711,6 +2807,30 @@ function bindEvents() {
   if (withdrawEmail) withdrawEmail.addEventListener('input', updateWithdrawConfirmState);
   if (withdrawPassword) withdrawPassword.addEventListener('input', updateWithdrawConfirmState);
   if (withdrawConfirmBtn) withdrawConfirmBtn.onclick = authWithdraw;
+  if (encryptionUnlockConfirmBtn) encryptionUnlockConfirmBtn.onclick = () => {
+    const value = encryptionUnlockPassword && encryptionUnlockPassword.value
+      ? encryptionUnlockPassword.value
+      : '';
+    settleEncryptionUnlockResolver(value);
+    closeEncryptionUnlockDialog();
+  };
+  if (encryptionUnlockCancelBtn) encryptionUnlockCancelBtn.onclick = () => {
+    closeEncryptionUnlockDialog();
+    settleEncryptionUnlockResolver('');
+  };
+  if (encryptionUnlockPassword) encryptionUnlockPassword.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    if (encryptionUnlockConfirmBtn) encryptionUnlockConfirmBtn.click();
+  });
+  if (encryptionUnlockDialog) {
+    encryptionUnlockDialog.addEventListener('cancel', () => {
+      settleEncryptionUnlockResolver('');
+    });
+    encryptionUnlockDialog.addEventListener('close', () => {
+      settleEncryptionUnlockResolver('');
+    });
+  }
   if (syncNowBtn) syncNowBtn.onclick = handleManualSync;
   document.addEventListener('keydown', (e) => {
     if (e.altKey && e.key === '\\') switchSplit('vertical');
