@@ -222,9 +222,17 @@ input { width: min(220px, 100%); }
 }
 
 .timer-config input {
-  width: 100%;
+  width: 4.2ch;
+  min-width: 4.2ch;
+  max-width: 4.2ch;
   min-height: 30px;
-  padding: 4px 8px;
+  padding: 4px 6px;
+  text-align: right;
+}
+
+.timer-config input::-webkit-outer-spin-button,
+.timer-config input::-webkit-inner-spin-button {
+  margin: 0;
 }
 
 .timer-config #pomodoro-apply {

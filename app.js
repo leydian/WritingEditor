@@ -1829,7 +1829,8 @@ function getPomodoroMinutes() {
     ? state.pomodoroMinutes
     : { focus: 25, break: 5 };
   const clamp = (value, fallback) => {
-    const n = Number(value);
+    const raw = String(value == null ? '' : value).replace(/[^\d]/g, '').slice(0, 3);
+    const n = Number(raw);
     if (!Number.isFinite(n)) return fallback;
     return Math.max(1, Math.min(180, Math.round(n)));
   };
@@ -1844,7 +1845,8 @@ function applyPomodoroMinutesFromInputs() {
   const breakInput = $('pomodoro-break-min');
   if (!focusInput || !breakInput) return;
   const clamp = (value, fallback) => {
-    const n = Number(value);
+    const raw = String(value == null ? '' : value).replace(/[^\d]/g, '').slice(0, 3);
+    const n = Number(raw);
     if (!Number.isFinite(n)) return fallback;
     return Math.max(1, Math.min(180, Math.round(n)));
   };
