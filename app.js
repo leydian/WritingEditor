@@ -2939,11 +2939,14 @@ function applyAppLayout() {
   calendarResizer.classList.toggle('hidden-panel', !showCalendar);
   statsPanel.classList.toggle('hidden-panel', !showCalendar);
   if (showTreeBar) {
-    showTreeBar.classList.toggle('hidden', isMobileMini || showSidebar);
+    showTreeBar.classList.toggle('hidden', showSidebar);
     showTreeBar.setAttribute('aria-label', isMobileMini ? '문서 목록 열기' : '문서 목록 보이기');
     showTreeBar.title = isMobileMini ? '문서 목록 열기' : '문서 목록 보이기';
   }
-  if (showCalendarBar) showCalendarBar.classList.toggle('hidden', isMobileMini || showCalendar || isCompact);
+  if (showCalendarBar) {
+    if (isMobileMini) showCalendarBar.classList.toggle('hidden', showCalendar);
+    else showCalendarBar.classList.toggle('hidden', showCalendar || isCompact);
+  }
 
   if (showSidebar && showCalendar) app.style.gridTemplateColumns = `${sidebarWidth}px 8px 1fr 8px ${calendarWidth}px`;
   else if (showSidebar && !showCalendar) app.style.gridTemplateColumns = `${sidebarWidth}px 8px 1fr`;

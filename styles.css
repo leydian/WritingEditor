@@ -847,7 +847,28 @@ textarea:focus { outline: none; }
   }
 
   .mobile-mini .edge-bar.right {
-    display: none !important;
+    position: fixed;
+    right: 12px;
+    bottom: 14px;
+    top: auto;
+    width: auto;
+    height: 40px;
+    border-radius: 999px;
+    padding: 0 14px;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #6a787a;
+    background: linear-gradient(180deg, #4f5f61 0%, #3e4d4e 100%);
+    opacity: .96;
+    font-size: 13px;
+    color: #e2e8f0;
+  }
+
+  .mobile-mini .edge-bar.right::after {
+    content: '기록';
+    line-height: 1;
+    font-weight: 600;
   }
 }
 
