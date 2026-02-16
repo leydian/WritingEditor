@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://unpkg.com; connect-src 'self' https://*.supabase.co; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'" />
   <title>WritingEditor Prototype</title>
-  <link rel="stylesheet" href="styles.css?v=9" />
+  <link rel="stylesheet" href="styles.css?v=10" />
 </head>
 <body>
   <div id="auth-gate" class="auth-gate">
@@ -29,27 +29,24 @@
 
   <div id="app" class="app">
     <aside id="sidebar" class="sidebar">
+      <button id="command-palette-btn" class="sidebar-command-btn" type="button" title="명령 팔레트 (Ctrl/Cmd+K)">명령 팔레트</button>
+      <div class="sidebar-menu">
+        <span id="user-email" class="pill"></span>
+        <button id="toggle-sidebar-toolbar-btn" type="button">문서 목록 보이기</button>
+        <button id="toggle-calendar-toolbar-btn" type="button">달력 보이기</button>
+        <button id="logout-btn">로그아웃</button>
+        <button id="upgrade-account-btn" class="hidden">회원가입</button>
+        <span id="sync-status" class="pill">로그인 필요</span>
+      </div>
       <div class="sidebar-header">
         <h1>문서 목록</h1>
         <button id="toggle-tree-btn" class="panel-icon-btn" type="button" title="문서 목록 숨기기" aria-label="문서 목록 숨기기">◀</button>
       </div>
-      <button id="command-palette-btn" class="sidebar-command-btn" type="button" title="명령 팔레트 (Ctrl/Cmd+K)">명령 팔레트</button>
       <div id="tree" class="tree"></div>
     </aside>
     <div id="sidebar-resizer" class="sidebar-resizer" aria-hidden="true"></div>
 
     <main class="main">
-      <header class="toolbar">
-        <div class="right-tools">
-          <span id="user-email" class="pill"></span>
-          <button id="toggle-sidebar-toolbar-btn" type="button">문서 목록 보이기</button>
-          <button id="toggle-calendar-toolbar-btn" type="button">달력 보이기</button>
-          <button id="logout-btn">로그아웃</button>
-          <button id="upgrade-account-btn" class="hidden">회원가입</button>
-          <span id="sync-status" class="pill">로그인 필요</span>
-        </div>
-      </header>
-
       <section id="editor-area" class="editor-area single">
         <div id="pane-a" class="pane active">
           <div class="pane-head">왼쪽 문서</div>

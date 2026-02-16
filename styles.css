@@ -93,7 +93,24 @@ body {
 .sidebar-header { display: flex; justify-content: space-between; align-items: center; }
 .sidebar-command-btn {
   width: 100%;
-  margin: 8px 0 10px;
+  margin: 0 0 10px;
+}
+
+.sidebar-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0 0 10px;
+}
+
+.sidebar-menu button,
+.sidebar-menu .pill {
+  width: 100%;
+}
+
+.sidebar-menu #toggle-sidebar-toolbar-btn,
+.sidebar-menu #toggle-calendar-toolbar-btn {
+  display: inline-flex;
 }
 
 .stats-panel-header {
