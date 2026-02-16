@@ -3212,11 +3212,13 @@ function bindEvents() {
     const sidebar = $('sidebar');
     const statsPanel = document.querySelector('.stats-panel');
     const showTreeBarBtn = $('show-tree-bar');
+    const showCalendarBarBtn = $('show-calendar-bar');
     const sidebarToolbar = $('toggle-sidebar-toolbar-btn');
     const calendarToolbar = $('toggle-calendar-toolbar-btn');
     if (sidebar && sidebar.contains(e.target)) return;
     if (statsPanel && statsPanel.contains(e.target)) return;
     if (showTreeBarBtn && showTreeBarBtn.contains(e.target)) return;
+    if (showCalendarBarBtn && showCalendarBarBtn.contains(e.target)) return;
     if (sidebarToolbar && sidebarToolbar.contains(e.target)) return;
     if (calendarToolbar && calendarToolbar.contains(e.target)) return;
     if (!mobileMiniSidebarOpen && !mobileMiniCalendarOpen) return;
