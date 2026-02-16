@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://unpkg.com; connect-src 'self' https://*.supabase.co; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'" />
   <title>WritingEditor Prototype</title>
-  <link rel="stylesheet" href="styles.css?v=8" />
+  <link rel="stylesheet" href="styles.css?v=9" />
 </head>
 <body>
   <div id="auth-gate" class="auth-gate">
@@ -33,56 +33,33 @@
         <h1>문서 목록</h1>
         <button id="toggle-tree-btn" class="panel-icon-btn" type="button" title="문서 목록 숨기기" aria-label="문서 목록 숨기기">◀</button>
       </div>
+      <button id="command-palette-btn" class="sidebar-command-btn" type="button" title="명령 팔레트 (Ctrl/Cmd+K)">명령 팔레트</button>
       <div id="tree" class="tree"></div>
     </aside>
     <div id="sidebar-resizer" class="sidebar-resizer" aria-hidden="true"></div>
 
     <main class="main">
       <header class="toolbar">
-        <div class="left-tools">
-          <button id="command-palette-btn" title="명령 팔레트 (Ctrl/Cmd+K)">명령 팔레트</button>
-          <button id="split-off">단일</button>
-          <button id="split-vertical">좌우 분할</button>
-          <button id="split-horizontal">상하 분할</button>
-          <button id="history-btn">히스토리(최대10)</button>
-        </div>
         <div class="right-tools">
           <span id="user-email" class="pill"></span>
           <button id="toggle-sidebar-toolbar-btn" type="button">문서 목록 보이기</button>
           <button id="toggle-calendar-toolbar-btn" type="button">달력 보이기</button>
           <button id="logout-btn">로그아웃</button>
           <button id="upgrade-account-btn" class="hidden">회원가입</button>
-          <button id="sync-now-btn">지금 동기화</button>
           <span id="sync-status" class="pill">로그인 필요</span>
-          <div class="export-wrap">
-            <button id="export-btn" type="button" aria-expanded="false">내보내기</button>
-            <div id="export-menu" class="export-menu hidden">
-              <button id="export-txt" type="button">TXT</button>
-              <button id="export-pdf" type="button">PDF</button>
-            </div>
-          </div>
         </div>
       </header>
 
-      <section class="workspace">
-        <section id="editor-area" class="editor-area single">
-          <div id="pane-a" class="pane active">
-            <div class="pane-head">왼쪽 문서</div>
-            <textarea id="editor-a" placeholder="여기에 글을 쓰세요..."></textarea>
-          </div>
-          <div id="editor-split-resizer" class="editor-split-resizer hidden" aria-hidden="true"></div>
-          <div id="pane-b" class="pane hidden">
-            <div class="pane-head">오른쪽 문서</div>
-            <textarea id="editor-b" placeholder="두 번째 문서..."></textarea>
-          </div>
-        </section>
-        <aside id="outline-panel" class="outline-panel">
-          <div class="outline-head">
-            <strong>문서 아웃라인</strong>
-            <button id="outline-toggle-btn" type="button">숨기기</button>
-          </div>
-          <ul id="outline-list"></ul>
-        </aside>
+      <section id="editor-area" class="editor-area single">
+        <div id="pane-a" class="pane active">
+          <div class="pane-head">왼쪽 문서</div>
+          <textarea id="editor-a" placeholder="여기에 글을 쓰세요..."></textarea>
+        </div>
+        <div id="editor-split-resizer" class="editor-split-resizer hidden" aria-hidden="true"></div>
+        <div id="pane-b" class="pane hidden">
+          <div class="pane-head">오른쪽 문서</div>
+          <textarea id="editor-b" placeholder="두 번째 문서..."></textarea>
+        </div>
       </section>
     </main>
 
@@ -209,7 +186,7 @@
   <script src="crypto-utils.js?v=1"></script>
   <script src="state-utils.js?v=1"></script>
   <script src="error-utils.js?v=1"></script>
-  <script src="app.js?v=79"></script>
+  <script src="app.js?v=80"></script>
 </body>
 </html>
 

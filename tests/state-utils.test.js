@@ -14,7 +14,6 @@ function testNormalizeState() {
     pomodoroMinutes: { focus: 0, break: 999 },
     pomodoro: { mode: 'bad', left: 0, running: 'yes' },
     ui: { commandPalette: { enabled: false, recentCommands: [' a ', '', 'sync'] } },
-    editor: { outline: { collapsed: 1, lastActiveHeadingId: 123 } },
     historyEntries: [{ id: 1, meta: { charDelta: '5', paraDelta: 'x' } }],
   });
 
@@ -33,8 +32,6 @@ function testNormalizeState() {
   assert.strictEqual(normalized.pomodoroMinutes.break, 180);
   assert.strictEqual(normalized.ui.commandPalette.enabled, false);
   assert.deepStrictEqual(normalized.ui.commandPalette.recentCommands, ['a', 'sync']);
-  assert.strictEqual(normalized.editor.outline.collapsed, true);
-  assert.strictEqual(normalized.editor.outline.lastActiveHeadingId, '123');
   assert.strictEqual(normalized.historyEntries[0].meta.charDelta, 5);
   assert.strictEqual(normalized.historyEntries[0].meta.paraDelta, 0);
 }

@@ -20,12 +20,6 @@
           recentCommands: [],
         },
       },
-      editor: {
-        outline: {
-          collapsed: false,
-          lastActiveHeadingId: null,
-        },
-      },
       split: 'single',
       goalByDate: {},
       goalLockedByDate: {},
@@ -58,14 +52,6 @@
           ...((raw.ui && raw.ui.commandPalette) || {}),
         },
       },
-      editor: {
-        ...base.editor,
-        ...(raw.editor || {}),
-        outline: {
-          ...base.editor.outline,
-          ...((raw.editor && raw.editor.outline) || {}),
-        },
-      },
       pomodoro: { ...base.pomodoro, ...(raw.pomodoro || {}) },
     };
 
@@ -87,15 +73,6 @@
         .filter((x) => x)
         .slice(0, 8);
     }
-
-    if (!merged.editor || typeof merged.editor !== 'object') merged.editor = { ...base.editor };
-    if (!merged.editor.outline || typeof merged.editor.outline !== 'object') {
-      merged.editor.outline = { ...base.editor.outline };
-    }
-    merged.editor.outline.collapsed = !!merged.editor.outline.collapsed;
-    merged.editor.outline.lastActiveHeadingId = merged.editor.outline.lastActiveHeadingId
-      ? String(merged.editor.outline.lastActiveHeadingId)
-      : null;
 
     if (!merged.goalLockedByDate || typeof merged.goalLockedByDate !== 'object') merged.goalLockedByDate = {};
     if (!merged.goalMetricByDate || typeof merged.goalMetricByDate !== 'object') merged.goalMetricByDate = {};

@@ -74,7 +74,6 @@ let pendingEncryptedLocalState = null;
 let localEncryptedWriteSeq = 0;
 let encryptionUnlockResolver = null;
 let commandPaletteSelection = 0;
-let lastOutlineHeadings = [];
 const dirtyDocIds = new Set();
 const layoutPrefs = loadLayoutPrefs();
 
@@ -127,12 +126,6 @@ function defaultState() {
         recentCommands: [],
       },
     },
-    editor: {
-      outline: {
-        collapsed: false,
-        lastActiveHeadingId: null,
-      },
-    },
     split: 'single',
     goalByDate: {},
     goalLockedByDate: {},
@@ -166,14 +159,6 @@ function normalizeState(raw) {
         ...((raw.ui && raw.ui.commandPalette) || {}),
       },
     },
-    editor: {
-      ...base.editor,
-      ...(raw.editor || {}),
-      outline: {
-        ...base.editor.outline,
-        ...((raw.editor && raw.editor.outline) || {}),
-      },
-    },
     pomodoro: { ...base.pomodoro, ...(raw.pomodoro || {}) },
   };
 
@@ -194,14 +179,6 @@ function normalizeState(raw) {
       .filter((x) => x)
       .slice(0, COMMAND_PALETTE_RECENT_LIMIT);
   }
-  if (!merged.editor || typeof merged.editor !== 'object') merged.editor = { ...base.editor };
-  if (!merged.editor.outline || typeof merged.editor.outline !== 'object') {
-    merged.editor.outline = { ...base.editor.outline };
-  }
-  merged.editor.outline.collapsed = !!merged.editor.outline.collapsed;
-  merged.editor.outline.lastActiveHeadingId = merged.editor.outline.lastActiveHeadingId
-    ? String(merged.editor.outline.lastActiveHeadingId)
-    : null;
   if (!merged.goalLockedByDate || typeof merged.goalLockedByDate !== 'object') merged.goalLockedByDate = {};
   if (!merged.goalMetricByDate || typeof merged.goalMetricByDate !== 'object') merged.goalMetricByDate = {};
   // Drop deprecated state key from older snapshots.
@@ -1683,7 +1660,6 @@ function updateEditorPane(pane, value) {
   markDocDirty(doc.id);
   updateProgress();
   saveState();
-  renderOutline();
 }
 
 function manualSavePane(pane) {
@@ -1757,7 +1733,6 @@ function renderEditors() {
 
   renderPaneHead('pane-a', `왼쪽: ${a && a.name ? a.name : '-'}`, 'a');
   renderPaneHead('pane-b', `오른쪽/아래: ${b && b.name ? b.name : '-'}`, 'b');
-  renderOutline();
 }
 
 function getSplitRatio(mode = state.split) {
@@ -2024,10 +1999,6 @@ function ensureUiSubState() {
     state.ui.commandPalette = { enabled: true, recentCommands: [] };
   }
   if (!Array.isArray(state.ui.commandPalette.recentCommands)) state.ui.commandPalette.recentCommands = [];
-  if (!state.editor || typeof state.editor !== 'object') state.editor = {};
-  if (!state.editor.outline || typeof state.editor.outline !== 'object') {
-    state.editor.outline = { collapsed: false, lastActiveHeadingId: null };
-  }
 }
 
 function openHistoryDialog() {
@@ -2045,7 +2016,6 @@ function getCommandPaletteCommands() {
     { id: 'history-open', label: '히스토리 열기', shortcut: '', run: () => openHistoryDialog() },
     { id: 'export-txt', label: 'TXT 내보내기', shortcut: '', run: () => exportTxt() },
     { id: 'export-pdf', label: 'PDF 내보내기', shortcut: '', run: () => exportPdf() },
-    { id: 'outline-toggle', label: '아웃라인 패널 토글', shortcut: '', run: () => toggleOutlinePanel() },
   ];
 }
 
@@ -2128,96 +2098,6 @@ function runCommandFromPalette(commandId) {
   command.run();
   trackRecentCommand(commandId);
   closeCommandPalette();
-}
-
-function extractHeadings(text) {
-  const lines = String(text || '').split('\n');
-  const headings = [];
-  lines.forEach((line, index) => {
-    const mdMatch = line.match(/^(#{1,3})\s+(.+)$/);
-    if (mdMatch) {
-      headings.push({
-        id: `h-${index}`,
-        level: mdMatch[1].length,
-        title: mdMatch[2].trim(),
-        line: index,
-      });
-      return;
-    }
-    const numbered = line.match(/^(\d+)\.\s+(.+)$/);
-    if (numbered) {
-      headings.push({
-        id: `h-${index}`,
-        level: 2,
-        title: numbered[2].trim(),
-        line: index,
-      });
-    }
-  });
-  return headings.slice(0, 120);
-}
-
-function getActiveEditorAndDoc() {
-  const pane = activePane === 'b' && state.split !== 'single' ? 'b' : 'a';
-  const docId = pane === 'a' ? state.activeDocA : state.activeDocB;
-  const editor = pane === 'a' ? $('editor-a') : $('editor-b');
-  const doc = getDoc(docId);
-  return { pane, doc, editor };
-}
-
-function renderOutline() {
-  ensureUiSubState();
-  const panel = $('outline-panel');
-  const list = $('outline-list');
-  const toggleBtn = $('outline-toggle-btn');
-  if (!panel || !list || !toggleBtn) return;
-  panel.classList.toggle('hidden', !!state.editor.outline.collapsed);
-  toggleBtn.textContent = state.editor.outline.collapsed ? '보이기' : '숨기기';
-  list.innerHTML = '';
-  const { doc } = getActiveEditorAndDoc();
-  lastOutlineHeadings = extractHeadings(doc && doc.content ? doc.content : '');
-  if (lastOutlineHeadings.length === 0) {
-    const li = document.createElement('li');
-    li.className = 'outline-item';
-    li.textContent = '헤딩(#, ##, ###)을 입력하면 구조가 표시됩니다.';
-    list.appendChild(li);
-    return;
-  }
-  lastOutlineHeadings.forEach((heading) => {
-    const li = document.createElement('li');
-    const isActive = state.editor.outline.lastActiveHeadingId === heading.id;
-    li.className = `outline-item level-${Math.min(heading.level, 3)} ${isActive ? 'active' : ''}`.trim();
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.textContent = heading.title;
-    btn.onclick = () => navigateToHeading(heading.id);
-    li.appendChild(btn);
-    list.appendChild(li);
-  });
-}
-
-function navigateToHeading(headingId) {
-  const heading = lastOutlineHeadings.find((item) => item.id === headingId);
-  const { editor } = getActiveEditorAndDoc();
-  if (!heading || !editor) return;
-  const lines = editor.value.split('\n');
-  let offset = 0;
-  for (let i = 0; i < heading.line; i += 1) offset += lines[i].length + 1;
-  editor.focus();
-  editor.setSelectionRange(offset, offset);
-  const lineHeight = Number.parseInt(getComputedStyle(editor).lineHeight, 10) || 28;
-  editor.scrollTop = Math.max(0, heading.line * lineHeight - lineHeight * 2);
-  ensureUiSubState();
-  state.editor.outline.lastActiveHeadingId = heading.id;
-  renderOutline();
-  saveState();
-}
-
-function toggleOutlinePanel() {
-  ensureUiSubState();
-  state.editor.outline.collapsed = !state.editor.outline.collapsed;
-  saveState();
-  renderOutline();
 }
 
 function exportTxt() {
@@ -2515,7 +2395,6 @@ function applyPomodoroMinutesFromInputs() {
 function renderAll() {
   renderTree();
   renderEditors();
-  renderOutline();
   renderTimer();
   updateProgress();
   $('goal-input').value = state.goalByDate[todayKey()] || '';
@@ -3018,15 +2897,11 @@ function applyAppLayout() {
 
 function bindEvents() {
   initAuthGateBindings();
-  const splitVerticalBtn = $('split-vertical');
-  const splitHorizontalBtn = $('split-horizontal');
-  const splitOffBtn = $('split-off');
   const commandPaletteBtn = $('command-palette-btn');
   const commandPaletteDialog = $('command-palette-dialog');
   const commandPaletteInput = $('command-palette-input');
   const toggleTreeBtn = $('toggle-tree-btn');
   const toggleCalendarBtn = $('toggle-calendar-btn');
-  const outlineToggleBtn = $('outline-toggle-btn');
   const showTreeBar = $('show-tree-bar');
   const showCalendarBar = $('show-calendar-bar');
   const sidebarToolbarBtn = $('toggle-sidebar-toolbar-btn');
@@ -3038,12 +2913,7 @@ function bindEvents() {
   const goalLockBtn = $('goal-lock-btn');
   const calendarViewBtn = $('calendar-view-btn');
   const calendarTableViewBtn = $('calendar-table-view-btn');
-  const historyBtn = $('history-btn');
   const historyCloseBtn = $('history-close');
-  const exportBtn = $('export-btn');
-  const exportMenu = $('export-menu');
-  const exportTxtBtn = $('export-txt');
-  const exportPdfBtn = $('export-pdf');
   const timerToggleBtn = $('timer-toggle');
   const timerSkipBtn = $('timer-skip');
   const pomodoroFocusMinInput = $('pomodoro-focus-min');
@@ -3064,13 +2934,8 @@ function bindEvents() {
   const encryptionUnlockPassword = $('encryption-unlock-password');
   const encryptionUnlockConfirmBtn = $('encryption-unlock-confirm-btn');
   const encryptionUnlockCancelBtn = $('encryption-unlock-cancel-btn');
-  const syncNowBtn = $('sync-now-btn');
 
-  if (splitVerticalBtn) splitVerticalBtn.onclick = () => switchSplit('vertical');
-  if (splitHorizontalBtn) splitHorizontalBtn.onclick = () => switchSplit('horizontal');
-  if (splitOffBtn) splitOffBtn.onclick = () => switchSplit('single');
   if (commandPaletteBtn) commandPaletteBtn.onclick = openCommandPalette;
-  if (outlineToggleBtn) outlineToggleBtn.onclick = toggleOutlinePanel;
   if (toggleTreeBtn) toggleTreeBtn.onclick = () => {
     if (window.innerWidth <= MOBILE_MINI_BREAKPOINT) {
       mobileMiniSidebarOpen = false;
@@ -3174,45 +3039,9 @@ function bindEvents() {
   if (calendarViewBtn) calendarViewBtn.onclick = () => setCalendarViewMode('calendar');
   if (calendarTableViewBtn) calendarTableViewBtn.onclick = () => setCalendarViewMode('table');
 
-  if (historyBtn) historyBtn.onclick = () => {
-    openHistoryDialog();
-  };
   if (historyCloseBtn) historyCloseBtn.onclick = () => {
     const dlg = $('history-dialog');
     if (dlg && typeof dlg.close === 'function') dlg.close();
-  };
-
-  const closeExportMenu = () => {
-    if (!exportMenu || !exportBtn) return;
-    exportMenu.classList.add('hidden');
-    exportBtn.setAttribute('aria-expanded', 'false');
-  };
-  const openExportMenu = () => {
-    if (!exportMenu || !exportBtn) return;
-    exportMenu.classList.remove('hidden');
-    exportBtn.setAttribute('aria-expanded', 'true');
-  };
-
-  if (exportBtn && exportMenu) {
-    exportBtn.onclick = (e) => {
-      e.stopPropagation();
-      if (exportMenu.classList.contains('hidden')) openExportMenu();
-      else closeExportMenu();
-    };
-    exportMenu.addEventListener('click', (e) => e.stopPropagation());
-    document.addEventListener('click', closeExportMenu);
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') closeExportMenu();
-    });
-  }
-
-  if (exportTxtBtn) exportTxtBtn.onclick = () => {
-    exportTxt();
-    closeExportMenu();
-  };
-  if (exportPdfBtn) exportPdfBtn.onclick = () => {
-    exportPdf();
-    closeExportMenu();
   };
 
   if (timerToggleBtn) timerToggleBtn.onclick = () => {
@@ -3267,7 +3096,6 @@ function bindEvents() {
       settleEncryptionUnlockResolver('');
     });
   }
-  if (syncNowBtn) syncNowBtn.onclick = handleManualSync;
   document.addEventListener('keydown', (e) => {
     const isCmdK = (e.ctrlKey || e.metaKey) && String(e.key).toLowerCase() === 'k';
     if (isCmdK) {
