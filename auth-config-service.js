@@ -22,7 +22,7 @@
       config,
       persistConfig,
       ensureSdkLoaded,
-      sdkCreateClient,
+      getSdkCreateClient,
       createCompatClient,
       sdkErrorMessage,
       previousAuthSubscription,
@@ -34,7 +34,7 @@
       return {
         ok: false,
         code: 'missing_config',
-        message: 'Supabase 설정이 없습니다. 관리자 설정 주입 또는 설정 저장을 완료하세요.',
+        message: 'Supabase 설정이 없습니다. 설정 저장을 먼저 진행하세요.',
       };
     }
 
@@ -50,6 +50,7 @@
     }
 
     const sdkReady = await ensureSdkLoaded();
+    const sdkCreateClient = (typeof getSdkCreateClient === 'function') ? getSdkCreateClient() : null;
     let supabase = null;
     let statusMessage = '';
     if (sdkReady && typeof sdkCreateClient === 'function') {

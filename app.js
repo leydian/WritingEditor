@@ -131,6 +131,14 @@ function safeSetItem(key, value) {
   }
 }
 
+function logServiceEvent(scope, payload = {}) {
+  try {
+    console.info('[service]', scope, payload);
+  } catch (_error) {
+    // noop
+  }
+}
+
 function loadLayoutPrefs() {
   try {
     const raw = JSON.parse(safeGetItem(LAYOUT_KEY) || 'null');
@@ -186,7 +194,27 @@ function normalizeState(raw) {
   }
   const base = defaultState();
   if (!raw || typeof raw !== 'object') return base;
-  return { ...base, ...raw };
+  const merged = {
+    ...base,
+    ...raw,
+    ui: {
+      ...base.ui,
+      ...(raw.ui || {}),
+      commandPalette: {
+        ...base.ui.commandPalette,
+        ...((raw.ui && raw.ui.commandPalette) || {}),
+      },
+    },
+    pomodoro: { ...base.pomodoro, ...(raw.pomodoro || {}) },
+  };
+  if (!Array.isArray(merged.docs) || merged.docs.length === 0) merged.docs = base.docs;
+  if (!Array.isArray(merged.folders)) merged.folders = [];
+  if (!Array.isArray(merged.historyEntries)) merged.historyEntries = [];
+  if (!['single', 'vertical', 'horizontal'].includes(merged.split)) merged.split = 'single';
+  merged.activeDocA = (merged.docs.find((d) => d.id === merged.activeDocA) || merged.docs[0]).id;
+  if (merged.activeDocB && !merged.docs.some((d) => d.id === merged.activeDocB)) merged.activeDocB = null;
+  merged.pomodoro.running = !!(merged.pomodoro && merged.pomodoro.running);
+  return merged;
 }
 
 function loadState() {
@@ -1124,9 +1152,11 @@ async function setupSupabase(options = {}) {
       config,
       persistConfig: saveSupabaseConfig,
       ensureSdkLoaded: ensureSupabaseSdkLoaded,
-      sdkCreateClient: (window.supabase && window.supabase.createClient)
-        ? ((url, anon) => window.supabase.createClient(url, anon))
-        : null,
+      getSdkCreateClient: () => (
+        window.supabase && window.supabase.createClient
+          ? ((url, anon) => window.supabase.createClient(url, anon))
+          : null
+      ),
       createCompatClient: createSupabaseCompatClient,
       sdkErrorMessage: supabaseSdkError,
       previousAuthSubscription: authSubscription,
@@ -1134,9 +1164,11 @@ async function setupSupabase(options = {}) {
       onSignedOut: handleSignedOut,
     });
     if (!result.ok) {
+      logServiceEvent('auth-config.setup.failed', { code: result.code, message: result.message });
       setAuthStatus(result.message || 'Supabase 초기화 실패');
       return false;
     }
+    logServiceEvent('auth-config.setup.ok', { code: result.code, hasStatus: !!result.statusMessage });
     supabase = result.supabase;
     authSubscription = result.authSubscription;
     if (result.statusMessage) setAuthStatus(result.statusMessage);
@@ -2446,6 +2478,7 @@ async function authSignUp() {
     resolveIdentifier,
   });
   if (!result.ok) {
+    logServiceEvent('auth.signup.failed', { code: result.code });
     if (result.code === 'invalid_identifier') {
       setAuthStatus(result.message || '아이디 형식을 확인하세요.');
       return;
@@ -2479,6 +2512,7 @@ async function authLogin() {
     resolveIdentifier,
   });
   if (!result.ok) {
+    logServiceEvent('auth.login.failed', { code: result.code });
     pendingAuthPassword = '';
     if (result.code === 'invalid_identifier') {
       setAuthStatus(result.message || '아이디 형식을 확인하세요.');
@@ -2502,6 +2536,7 @@ async function authAnonymousLogin() {
   pendingAuthPassword = '';
   const result = await authService.anonymousLogin(supabase);
   if (!result.ok) {
+    logServiceEvent('auth.anonymous.failed', { code: result.code });
     if (result.code === 'not_initialized') {
       setAuthStatus('익명 로그인 사용 불가: Supabase 연결이 초기화되지 않았습니다.');
       return;
@@ -2561,6 +2596,7 @@ async function upgradeAnonymousAccount() {
     setAuthStatus('회원가입 완료: 자동 로그인되었습니다.');
     return;
   }
+  logServiceEvent('auth.upgrade.failed', { code: result.code });
   pendingAuthPassword = '';
   if (result.code === 'not_eligible') {
     setAuthStatus('익명 로그인 사용자만 회원가입 전환이 가능합니다.');
@@ -2902,19 +2938,22 @@ async function authWithdraw() {
 }
 
 async function saveAuthConfigAndInit() {
-  if (!authConfigService || typeof authConfigService.resolveConfigForSave !== 'function') {
-    setAuthStatus('설정 저장 기능을 초기화하지 못했습니다. 새로고침 후 다시 시도하세요.');
-    return;
-  }
   const urlInput = $('sb-url');
   const anonInput = $('sb-anon');
   const embedded = getEmbeddedSupabaseConfig();
-  const resolvedConfig = authConfigService.resolveConfigForSave({
-    urlInputValue: urlInput && urlInput.value ? urlInput.value : '',
-    anonInputValue: anonInput && anonInput.value ? anonInput.value : '',
-    embeddedConfig: embedded,
-  });
+  const resolvedConfig = (authConfigService && typeof authConfigService.resolveConfigForSave === 'function')
+    ? authConfigService.resolveConfigForSave({
+      urlInputValue: urlInput && urlInput.value ? urlInput.value : '',
+      anonInputValue: anonInput && anonInput.value ? anonInput.value : '',
+      embeddedConfig: embedded,
+    })
+    : (() => {
+      const url = (urlInput && urlInput.value ? urlInput.value.trim() : '') || (embedded ? embedded.url : '');
+      const anon = (anonInput && anonInput.value ? anonInput.value.trim() : '') || (embedded ? embedded.anon : '');
+      return (url && anon) ? { ok: true, url, anon } : { ok: false, code: 'missing_config' };
+    })();
   if (!resolvedConfig.ok) {
+    logServiceEvent('auth-config.resolve.failed', { code: resolvedConfig.code || 'missing_config' });
     setAuthStatus('관리자 Supabase 설정이 누락되었습니다.');
     return;
   }
@@ -3031,7 +3070,16 @@ function applyAppLayout() {
 
 function bindEvents() {
   initAuthGateBindings();
-  if (!uiBindings || typeof uiBindings.bindUiEvents !== 'function') return;
+  if (!uiBindings || typeof uiBindings.bindUiEvents !== 'function') {
+    const editorA = $('editor-a');
+    const editorB = $('editor-b');
+    const logoutBtn = $('logout-btn');
+    if (editorA) editorA.addEventListener('input', (e) => updateEditorPane('a', e.target.value));
+    if (editorB) editorB.addEventListener('input', (e) => updateEditorPane('b', e.target.value));
+    if (logoutBtn) logoutBtn.onclick = authLogout;
+    logServiceEvent('ui-bindings.missing', { fallback: true });
+    return;
+  }
   uiBindings.bindUiEvents({
     $,
     MOBILE_MINI_BREAKPOINT,

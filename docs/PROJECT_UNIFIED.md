@@ -167,6 +167,7 @@ node .\scripts\security-preflight-check.js
 - `tests/auth-service.test.js`
 - `tests/auth-config-service.test.js`
 - `tests/sync-utils.test.js`
+- `tests/ui-bindings.test.js`
 
 검증 명령:
 
@@ -177,6 +178,7 @@ node .\tests\state-utils.test.js
 node .\tests\auth-service.test.js
 node .\tests\auth-config-service.test.js
 node .\tests\sync-utils.test.js
+node .\tests\ui-bindings.test.js
 node .\scripts\security-preflight-check.js
 ```
 
@@ -237,6 +239,7 @@ node .\tests\state-utils.test.js
 node .\tests\auth-service.test.js
 node .\tests\auth-config-service.test.js
 node .\tests\sync-utils.test.js
+node .\tests\ui-bindings.test.js
 node .\scripts\security-preflight-check.js
 ```
 

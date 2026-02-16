@@ -31,7 +31,7 @@ async function testSetupSupabaseRuntime() {
     config: { url: 'https://x.supabase.co', anon: 'anon-key' },
     persistConfig: () => true,
     ensureSdkLoaded: async () => true,
-    sdkCreateClient: () => ({
+    getSdkCreateClient: () => (() => ({
       auth: {
         async getSession() {
           return { data: { session: { user: { id: 'u1' } } }, error: null };
@@ -41,8 +41,10 @@ async function testSetupSupabaseRuntime() {
           return { data: { subscription: { unsubscribe() {} } } };
         },
       },
-    }),
-    createCompatClient: () => ({}),
+    })),
+    createCompatClient: () => {
+      throw new Error('compat should not be called');
+    },
     sdkErrorMessage: '',
     previousAuthSubscription: {
       unsubscribe() { unsubscribed = true; },
@@ -62,7 +64,7 @@ async function testSetupSupabaseRuntimeFallbackClient() {
     config: { url: 'https://x.supabase.co', anon: 'anon-key' },
     persistConfig: () => true,
     ensureSdkLoaded: async () => false,
-    sdkCreateClient: null,
+    getSdkCreateClient: () => null,
     createCompatClient: () => ({
       auth: {
         async getSession() {
@@ -83,10 +85,46 @@ async function testSetupSupabaseRuntimeFallbackClient() {
   assert.strictEqual(result.statusMessage.includes('대체 모드'), true);
 }
 
+async function testSetupSupabaseRuntimeSdkLateReady() {
+  let lookedUpAfterEnsure = false;
+  let ensureDone = false;
+  const result = await authConfigService.setupSupabaseRuntime({
+    config: { url: 'https://x.supabase.co', anon: 'anon-key' },
+    persistConfig: () => true,
+    ensureSdkLoaded: async () => {
+      ensureDone = true;
+      return true;
+    },
+    getSdkCreateClient: () => {
+      if (ensureDone) lookedUpAfterEnsure = true;
+      return () => ({
+        auth: {
+          async getSession() {
+            return { data: { session: null }, error: null };
+          },
+          onAuthStateChange() {
+            return { data: { subscription: null } };
+          },
+        },
+      });
+    },
+    createCompatClient: () => {
+      throw new Error('compat should not be used');
+    },
+    sdkErrorMessage: '',
+    previousAuthSubscription: null,
+    onSignedIn: async () => {},
+    onSignedOut: () => {},
+  });
+  assert.strictEqual(result.ok, true);
+  assert.strictEqual(lookedUpAfterEnsure, true);
+}
+
 async function run() {
   testResolveConfigForSave();
   await testSetupSupabaseRuntime();
   await testSetupSupabaseRuntimeFallbackClient();
+  await testSetupSupabaseRuntimeSdkLateReady();
   console.log('auth-config-service tests passed');
 }
 

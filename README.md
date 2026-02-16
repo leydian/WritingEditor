@@ -38,6 +38,7 @@ node .\tests\state-utils.test.js
 node .\tests\auth-service.test.js
 node .\tests\auth-config-service.test.js
 node .\tests\sync-utils.test.js
+node .\tests\ui-bindings.test.js
 node .\scripts\security-preflight-check.js
 ```
 
