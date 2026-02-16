@@ -15,12 +15,14 @@ const SUPABASE_SDK_URLS = [
 ];
 const MOBILE_MINI_BREAKPOINT = 900;
 const WITHDRAW_CONFIRM_TEXT = '회원탈퇴';
+const DEFAULT_SUPABASE_URL = 'https://rvrysnatyimuilarxfft.supabase.co';
+const DEFAULT_SUPABASE_ANON = 'sb_publishable_v_aVOb5bAPP3pr1dF7POBQ_qnxCWVho';
 const EMBEDDED_SUPABASE_URL = (typeof globalThis !== 'undefined' && globalThis.__WE_SUPABASE_URL__)
   ? String(globalThis.__WE_SUPABASE_URL__).trim()
-  : '';
+  : DEFAULT_SUPABASE_URL;
 const EMBEDDED_SUPABASE_ANON = (typeof globalThis !== 'undefined' && globalThis.__WE_SUPABASE_ANON__)
   ? String(globalThis.__WE_SUPABASE_ANON__).trim()
-  : '';
+  : DEFAULT_SUPABASE_ANON;
 const stateUtils = (typeof StateUtils !== 'undefined' && StateUtils) ? StateUtils : null;
 const cryptoUtils = (typeof CryptoUtils !== 'undefined' && CryptoUtils) ? CryptoUtils : null;
 
@@ -2155,7 +2157,11 @@ async function authLogin() {
 }
 
 async function authAnonymousLogin() {
-  if (!supabase || !supabase.auth || typeof supabase.auth.signInAnonymously !== 'function') {
+  if (!supabase || !supabase.auth) {
+    setAuthStatus('익명 로그인 사용 불가: Supabase 연결이 초기화되지 않았습니다.');
+    return;
+  }
+  if (typeof supabase.auth.signInAnonymously !== 'function') {
     setAuthStatus('익명 로그인 사용 불가: Supabase Anonymous provider 설정을 확인하세요.');
     return;
   }
