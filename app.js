@@ -47,6 +47,7 @@ let autoSyncTimer = null;
 let lastSyncAt = 0;
 let historyAutoTimer = null;
 let hydratingRemoteState = false;
+let lastKnownRemoteUpdatedAt = null;
 let supabaseSdkPromise = null;
 let supabaseSdkError = '';
 let showWithdrawOnAuthGate = false;
@@ -336,6 +337,7 @@ function createSupabaseCompatClient(url, anon) {
             access_token: data.access_token,
             refresh_token: data.refresh_token,
             expires_in: data.expires_in,
+            expires_at: Math.floor(Date.now() / 1000) + Number(data.expires_in || 0),
             token_type: data.token_type,
             user: data.user,
           };
@@ -360,6 +362,7 @@ function createSupabaseCompatClient(url, anon) {
           access_token: data.access_token,
           refresh_token: data.refresh_token,
           expires_in: data.expires_in,
+          expires_at: Math.floor(Date.now() / 1000) + Number(data.expires_in || 0),
           token_type: data.token_type,
           user: data.user,
         };
@@ -386,6 +389,7 @@ function createSupabaseCompatClient(url, anon) {
           access_token: data.access_token,
           refresh_token: data.refresh_token,
           expires_in: data.expires_in,
+          expires_at: Math.floor(Date.now() / 1000) + Number(data.expires_in || 0),
           token_type: data.token_type,
           user: data.user,
         };
@@ -438,6 +442,36 @@ function createSupabaseCompatClient(url, anon) {
     async getSession() {
       const session = readSession();
       return { data: { session: session || null }, error: null };
+    },
+    async refreshSession() {
+      const session = readSession();
+      if (!session || !session.refresh_token) {
+        return { data: { session: null }, error: makeError('refresh token이 없습니다.') };
+      }
+      try {
+        const res = await fetch(`${url}/auth/v1/token?grant_type=refresh_token`, {
+          method: 'POST',
+          headers: apiHeaders(false),
+          body: JSON.stringify({ refresh_token: session.refresh_token }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          return { data: { session: null }, error: makeError(data.error_description || data.msg || data.message || `HTTP ${res.status}`, res.status) };
+        }
+        const next = {
+          access_token: data.access_token || session.access_token,
+          refresh_token: data.refresh_token || session.refresh_token,
+          expires_in: data.expires_in,
+          expires_at: Math.floor(Date.now() / 1000) + Number(data.expires_in || 0),
+          token_type: data.token_type || session.token_type,
+          user: data.user || session.user,
+        };
+        writeSession(next);
+        notify('TOKEN_REFRESHED', next);
+        return { data: { session: next }, error: null };
+      } catch (error) {
+        return { data: { session: null }, error: makeError(error && error.message ? error.message : '세션 갱신 요청 실패') };
+      }
     },
     onAuthStateChange(callback) {
       listeners.add(callback);
@@ -695,6 +729,38 @@ async function pushRemoteState() {
     setSyncStatus('로그인 필요', 'idle');
     return false;
   }
+  const fresh = await ensureFreshAuthSession();
+  if (!fresh.ok) {
+    setSyncStatus(`동기화 중단: 세션 확인 실패 (${fresh.message})`, 'error');
+    return false;
+  }
+  if (fresh.user && fresh.user.id) supabaseUser = fresh.user;
+
+  const { data: remoteMeta, error: remoteMetaError } = await supabase
+    .from('editor_states')
+    .select('updated_at')
+    .eq('user_id', supabaseUser.id)
+    .maybeSingle();
+  if (remoteMetaError) {
+    showUiError('sync', remoteMetaError, { auth: false, sync: true, logContext: 'sync preflight meta read failed' });
+    return false;
+  }
+  const remoteUpdatedAt = remoteMeta && remoteMeta.updated_at ? remoteMeta.updated_at : null;
+  const hasConflict = !!(
+    remoteUpdatedAt
+    && lastKnownRemoteUpdatedAt
+    && new Date(remoteUpdatedAt).getTime() > new Date(lastKnownRemoteUpdatedAt).getTime()
+  );
+  if (hasConflict) {
+    const conflictMsg = `원격 변경 감지: 다른 기기에서 ${new Date(remoteUpdatedAt).toLocaleString()}에 수정되었습니다.`;
+    const overwrite = confirm(`${conflictMsg}\n로컬 상태로 덮어쓸까요? (취소 시 최신 원격 상태를 불러옵니다)`);
+    if (!overwrite) {
+      await pullRemoteState();
+      setSyncStatus('충돌 감지: 최신 원격 상태를 불러왔습니다.', 'ok');
+      return false;
+    }
+  }
+
   setSyncStatus('클라우드 동기화 중…', 'pending');
   const payload = {
     user_id: supabaseUser.id,
@@ -708,12 +774,19 @@ async function pushRemoteState() {
     return false;
   }
   lastSyncAt = Date.now();
+  lastKnownRemoteUpdatedAt = payload.updated_at;
   setSyncStatus(`클라우드 동기화 완료 (${new Date().toLocaleTimeString()})`, 'ok');
   return true;
 }
 
 async function pullRemoteState() {
   if (!supabase || !supabaseUser) return;
+  const fresh = await ensureFreshAuthSession();
+  if (!fresh.ok) {
+    setSyncStatus(`동기화 중단: 세션 확인 실패 (${fresh.message})`, 'error');
+    return;
+  }
+  if (fresh.user && fresh.user.id) supabaseUser = fresh.user;
 
   setSyncStatus('클라우드 데이터 확인 중…', 'pending');
   const { data, error } = await supabase
@@ -733,6 +806,7 @@ async function pullRemoteState() {
     saveState({ skipRemote: true });
     hydratingRemoteState = false;
     renderAll();
+    lastKnownRemoteUpdatedAt = data.updated_at || null;
     safeSetItem(LAST_USER_KEY, String(supabaseUser.id || ''));
     setSyncStatus(`클라우드 상태 불러옴 (${new Date(data.updated_at).toLocaleString()})`, 'ok');
     return;
@@ -757,6 +831,7 @@ async function handleSignedIn(user) {
 
 function handleSignedOut() {
   supabaseUser = null;
+  lastKnownRemoteUpdatedAt = null;
   dirtyDocIds.clear();
   if (autoSyncTimer) {
     clearTimeout(autoSyncTimer);
@@ -1846,6 +1921,22 @@ async function authLogout() {
     });
     return;
   }
+
+  // Ensure latest edits are pushed before sign-out to reduce cross-device data gaps.
+  flushHistorySnapshots('manual-sync', { includeFullSync: true, onlyFullSync: true });
+  if (autoSyncTimer) {
+    clearTimeout(autoSyncTimer);
+    autoSyncTimer = null;
+  }
+  const synced = await pushRemoteState();
+  if (!synced) {
+    const proceed = confirm('마지막 동기화에 실패했습니다. 지금 로그아웃하면 최근 변경이 다른 기기에 반영되지 않을 수 있습니다. 그래도 로그아웃할까요?');
+    if (!proceed) {
+      setAuthStatus('로그아웃을 취소했습니다. 동기화 후 다시 시도하세요.');
+      return;
+    }
+  }
+
   showWithdrawOnAuthGate = true;
   await supabase.auth.signOut();
 }
