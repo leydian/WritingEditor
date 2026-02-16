@@ -232,15 +232,16 @@ input { width: min(220px, 100%); }
 #timer-display { font-size: 24px; font-weight: 700; }
 
 .timer-config {
-  display: grid;
-  grid-template-columns: auto minmax(64px, 84px) auto minmax(64px, 84px) auto;
-  gap: 6px;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 4px;
   align-items: center;
 }
 
 .timer-config label {
   font-size: 12px;
   color: var(--text-soft);
+  margin-right: 1px;
 }
 
 .timer-config input {
@@ -262,6 +263,7 @@ input { width: min(220px, 100%); }
 .timer-config #pomodoro-apply {
   min-height: 30px;
   padding: 4px 10px;
+  margin-left: 2px;
 }
 
 .stats-panel .stats-row {

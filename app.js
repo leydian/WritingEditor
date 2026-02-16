@@ -1487,11 +1487,17 @@ function updateProgress() {
   };
 
   const metricLabel = goalMetric === 'noSpaces' ? '공백 제외' : '공백 포함';
-  $('progress-pill').textContent = `${actualForGoal} / ${target} (${metricLabel})`;
-  $('daily-stats').textContent = `공백 포함: ${actualWithSpaces}\n공백 제외: ${actualNoSpaces}\n집중 횟수: ${state.sessionsByDate[date] || 0}\n집중 시간: ${formatDuration(focusSec)}`;
+  $('progress-pill').textContent = `${formatNumber(actualForGoal)} / ${formatNumber(target)} (${metricLabel})`;
+  $('daily-stats').textContent = `공백 포함: ${formatNumber(actualWithSpaces)}\n공백 제외: ${formatNumber(actualNoSpaces)}\n집중 횟수: ${formatNumber(state.sessionsByDate[date] || 0)}\n집중 시간: ${formatDuration(focusSec)}`;
   renderCalendar();
   renderCalendarTable();
   updateGoalLockUI();
+}
+
+function formatNumber(value) {
+  const n = Number(value || 0);
+  if (!Number.isFinite(n)) return '0';
+  return new Intl.NumberFormat('ko-KR').format(Math.round(n));
 }
 
 function formatDuration(totalSeconds) {
@@ -1550,7 +1556,7 @@ function renderCalendar() {
     const el = document.createElement('div');
     el.className = `day ${achieved ? 'hit' : ''}`;
     el.textContent = d;
-    el.title = `${key}\n기준: ${goalMetric === 'noSpaces' ? '공백 제외' : '공백 포함'}\n목표 글자수: ${target}\n실제 달성(공백 포함): ${actualWithSpaces}\n실제 달성(공백 제외): ${actualNoSpaces}`;
+    el.title = `${key}\n기준: ${goalMetric === 'noSpaces' ? '공백 제외' : '공백 포함'}\n목표 글자수: ${formatNumber(target)}\n실제 달성(공백 포함): ${formatNumber(actualWithSpaces)}\n실제 달성(공백 제외): ${formatNumber(actualNoSpaces)}`;
     box.appendChild(el);
   }
 }
@@ -1580,7 +1586,7 @@ function renderCalendarTable() {
     const actualForGoal = getActualByGoalMetric(actualWithSpaces, actualNoSpaces, goalMetric);
     const achieved = target > 0 && actualForGoal >= target;
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${key}</td><td>${goalMetric === 'noSpaces' ? '공백 제외' : '공백 포함'}</td><td>${target}</td><td>${actualWithSpaces}</td><td>${actualNoSpaces}</td><td>${achieved ? '달성' : '-'}</td>`;
+    tr.innerHTML = `<td>${key}</td><td>${goalMetric === 'noSpaces' ? '공백 제외' : '공백 포함'}</td><td>${formatNumber(target)}</td><td>${formatNumber(actualWithSpaces)}</td><td>${formatNumber(actualNoSpaces)}</td><td>${achieved ? '달성' : '-'}</td>`;
     tbody.appendChild(tr);
   }
   table.appendChild(tbody);
