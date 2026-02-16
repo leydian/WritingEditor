@@ -1,12 +1,12 @@
 ﻿# WritingEditor 통합 프로젝트 문서 (단일 기준본)
 
 작성일: 2026-02-16  
-최종 갱신: 2026-02-16 (최신 커밋 `de5aa22` 반영)  
+최종 갱신: 2026-02-16 (최신 커밋 `a88c73e` 반영)  
 기준 경로: `C:\dlatl\WritingEditor`  
 기준 브랜치: `main`  
 원격 저장소: `https://github.com/leydian/WritingEditor`  
-현재 앱 버전: `index.html` -> `app.js?v=78`  
-현재 스타일 버전: `index.html` -> `styles.css?v=7`
+현재 앱 버전: `index.html` -> `app.js?v=92`  
+현재 스타일 버전: `index.html` -> `styles.css?v=15`
 
 ## 0. 진행현황 요약 (이번 사이클)
 
@@ -35,6 +35,13 @@
 - 사용자 경험 기준: 아이디+비밀번호 가입/로그인
 - 내부 구현: Supabase 호환을 위한 `아이디 -> synthetic email` 매핑
 - 익명 로그인 회귀 이슈 수정 완료
+
+6. 유지보수/확장 리팩터링
+- `app.js`의 대형 이벤트 바인딩을 `ui-bindings.js`로 분리
+- 인증 도메인 로직을 `auth-service.js`로 분리
+- Supabase 설정/초기화 경계를 `auth-config-service.js`로 분리
+- 동기화 계산/충돌 판정을 `sync-utils.js`로 분리
+- 서비스 미로딩/SDK 후행 로드 상황에 대한 fallback 및 회귀 테스트 보강
 
 ---
 
@@ -130,6 +137,15 @@
 - 툴바/중앙 에디터 잔여 블루 톤 제거
 - 익명 로그인 사용자 표시: `익명로그인`
 
+### 2.9 코드 구조(리팩터링 반영)
+
+- `app.js`는 부트스트랩/조립 중심으로 유지
+- 인증/세션/탈퇴: `auth-service.js`
+- 설정/초기화: `auth-config-service.js`
+- 동기화 계산: `sync-utils.js`
+- UI 이벤트 바인딩: `ui-bindings.js`
+- 상태 정규화/히스토리/뽀모도로 계산: `state-utils.js`
+
 ---
 
 ## 3. 보안 / 신뢰성 상태
@@ -211,16 +227,16 @@ alter table public.editor_states enable row level security;
 
 ## 6. 최근 작업 타임라인 (최신순)
 
-1. `de5aa22` 아이디 우선 인증 플로우 도입(Supabase 호환 매핑)
-2. `8a33daf` Supabase 설정 하드닝 이후 익명 로그인 회귀 수정
-3. `be65f9f` 암호화 흐름/동기화 재시도/운영 문서 보강
-4. `474bb77` 일반 계정 로그인 비밀번호 기반 데이터 암호화 도입
-5. `44a05ad` 툴바 잔여 블루 제거 + 익명 사용자 라벨 개선
-6. `3ecf981` 톤다운 회색+그린 테마 2안 적용
-7. `be6b69a` 회색+그린 테마 적용
-8. `92ba760` 문서 구조 정리 + 뽀모도로 패널 UI 개선
-9. `faf6032` 통합 기준 문서 최신화
-10. `16120fa` 뽀모도로 행 레이아웃/숫자 포맷 개선
+1. `a88c73e` 모듈 fallback 강화 + 회귀 테스트 추가(P0/P1/P2 반영)
+2. `05f0bc5` 인증/설정/동기화/UI 바인딩 모듈 분리 리팩터링
+3. `ec77ab5` 다중 파트 작업로그 문서 체계 추가
+4. `de5aa22` 아이디 우선 인증 플로우 도입(Supabase 호환 매핑)
+5. `8a33daf` Supabase 설정 하드닝 이후 익명 로그인 회귀 수정
+6. `be65f9f` 암호화 흐름/동기화 재시도/운영 문서 보강
+7. `474bb77` 일반 계정 로그인 비밀번호 기반 데이터 암호화 도입
+8. `44a05ad` 툴바 잔여 블루 제거 + 익명 사용자 라벨 개선
+9. `3ecf981` 톤다운 회색+그린 테마 2안 적용
+10. `be6b69a` 회색+그린 테마 적용
 
 ---
 
@@ -264,6 +280,7 @@ node .\scripts\security-preflight-check.js
 - 일반 계정은 복호화에 로그인 비밀번호가 필요(분실 시 접근 불가)
 - `localStorage` 중심 구조 특성상 XSS 발생 시 민감도 상승
 - 아이디 매핑 도메인(`id.writingeditor.local`) 운영 정책 문서화 추가 필요
+- 모듈 스크립트(`auth-service.js`, `auth-config-service.js`, `ui-bindings.js`) 로드 실패 시 fallback 경로는 있으나, 핵심 UX 저하 가능
 
 ---
 

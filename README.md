@@ -5,7 +5,7 @@
 ## 프로젝트 구조
 
 - `index.html`: 앱 엔트리
-- `app.js`: 핵심 로직(인증/동기화/에디터/암호화 연동)
+- `app.js`: 앱 부트스트랩/조립 로직(서비스/유틸 연결)
 - `crypto-utils.js`: 암복호화 유틸(AES-GCM + PBKDF2)
 - `styles.css`: 스타일
 - `error-utils.js`: 오류 처리 유틸
