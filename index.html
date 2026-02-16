@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://unpkg.com; connect-src 'self' https://*.supabase.co; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'" />
   <title>WritingEditor Prototype</title>
-  <link rel="stylesheet" href="styles.css?v=14" />
+  <link rel="stylesheet" href="styles.css?v=15" />
 </head>
 <body>
   <div id="auth-gate" class="auth-gate">
@@ -127,7 +127,10 @@
   </dialog>
 
   <dialog id="command-palette-dialog" class="command-palette-dialog">
-    <h3>명령 팔레트</h3>
+    <div class="command-palette-head">
+      <h3>명령 팔레트</h3>
+      <button id="command-palette-close-btn" type="button" aria-label="명령 팔레트 닫기">닫기</button>
+    </div>
     <input id="command-palette-input" type="text" placeholder="명령 검색..." autocomplete="off" />
     <ul id="command-palette-list"></ul>
     <p class="command-palette-help">Enter: 실행 · Esc: 닫기</p>
@@ -183,7 +186,7 @@
   <script src="crypto-utils.js?v=1"></script>
   <script src="state-utils.js?v=1"></script>
   <script src="error-utils.js?v=1"></script>
-  <script src="app.js?v=87"></script>
+  <script src="app.js?v=89"></script>
 </body>
 </html>
 

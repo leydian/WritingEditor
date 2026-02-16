@@ -1267,6 +1267,8 @@ function applyAuthState(user) {
   const withdrawBtn = $('withdraw-btn');
   const upgradeBtn = $('upgrade-account-btn');
   const logoutBtn = $('logout-btn');
+  const showTreeBar = $('show-tree-bar');
+  const showCalendarBar = $('show-calendar-bar');
   if (user) {
     gate.classList.add('hidden');
     app.style.display = 'grid';
@@ -1280,6 +1282,7 @@ function applyAuthState(user) {
     }
     if (withdrawBtn) withdrawBtn.classList.add('hidden');
     if (upgradeBtn) upgradeBtn.classList.toggle('hidden', !isAnonymousUser(user));
+    applyAppLayout();
   } else {
     gate.classList.remove('hidden');
     app.style.display = 'none';
@@ -1291,6 +1294,8 @@ function applyAuthState(user) {
     }
     if (withdrawBtn) withdrawBtn.classList.toggle('hidden', !showWithdrawOnAuthGate);
     if (upgradeBtn) upgradeBtn.classList.add('hidden');
+    if (showTreeBar) showTreeBar.classList.add('hidden');
+    if (showCalendarBar) showCalendarBar.classList.add('hidden');
   }
 }
 
@@ -2963,6 +2968,7 @@ function bindEvents() {
   const commandPaletteBtn = $('command-palette-btn');
   const commandPaletteDialog = $('command-palette-dialog');
   const commandPaletteInput = $('command-palette-input');
+  const commandPaletteCloseBtn = $('command-palette-close-btn');
   const toggleTreeBtn = $('toggle-tree-btn');
   const toggleCalendarBtn = $('toggle-calendar-btn');
   const showTreeBar = $('show-tree-bar');
@@ -3205,7 +3211,11 @@ function bindEvents() {
       e.preventDefault();
       closeCommandPalette();
     });
+    commandPaletteDialog.addEventListener('click', (e) => {
+      if (e.target === commandPaletteDialog) closeCommandPalette();
+    });
   }
+  if (commandPaletteCloseBtn) commandPaletteCloseBtn.onclick = closeCommandPalette;
 
   document.addEventListener('click', (e) => {
     if (window.innerWidth > MOBILE_MINI_BREAKPOINT) return;

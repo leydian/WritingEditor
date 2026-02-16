@@ -639,6 +639,18 @@ textarea:focus { outline: none; }
   padding: 14px;
 }
 
+.command-palette-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+}
+
+.command-palette-head h3 {
+  margin: 0;
+}
+
 #command-palette-input {
   width: 100%;
   margin: 0 0 8px;
@@ -855,7 +867,7 @@ textarea:focus { outline: none; }
     height: 40px;
     border-radius: 999px;
     padding: 0 14px;
-    display: inline-flex !important;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     border: 1px solid #6a787a;
