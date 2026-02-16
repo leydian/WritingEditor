@@ -1414,8 +1414,7 @@ function switchSplit(mode) {
 function exportTxt() {
   const d = getDoc(state.activeDocA);
   if (!d) return;
-  // Add UTF-8 BOM so mobile text viewers reliably detect Korean encoding.
-  const blob = new Blob(['\uFEFF', d.content], { type: 'text/plain;charset=utf-8' });
+  const blob = makeUtf8TxtBlob(d.content || '');
   downloadBlob(blob, `${d.name.replace(/\.[^/.]+$/, '')}_${todayKey()}.txt`);
 }
 
@@ -1442,27 +1441,59 @@ function exportPdf() {
   }, 50);
 }
 
+function makeUtf8TxtBlob(text) {
+  const encoder = new TextEncoder();
+  const contentBytes = encoder.encode(String(text || ''));
+  const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
+  const bytes = new Uint8Array(bom.length + contentBytes.length);
+  bytes.set(bom, 0);
+  bytes.set(contentBytes, bom.length);
+  return new Blob([bytes], { type: 'text/plain;charset=utf-8' });
+}
+
 function downloadBlob(blob, name) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
   const ua = (navigator.userAgent || '').toLowerCase();
   const isIOS = /iphone|ipad|ipod/.test(ua);
 
+  if (isIOS) {
+    // iOS Safari can mis-handle blob URL downloads for .txt. Use data URL fallback.
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const dataUrl = typeof reader.result === 'string' ? reader.result : '';
+        if (dataUrl) {
+          window.open(dataUrl, '_blank');
+          return;
+        }
+      } catch (_error) {
+        // noop
+      }
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+      setTimeout(() => URL.revokeObjectURL(url), 1500);
+    };
+    reader.onerror = () => {
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+      setTimeout(() => URL.revokeObjectURL(url), 1500);
+    };
+    reader.readAsDataURL(blob);
+    return;
+  }
+
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
   a.href = url;
   a.download = name;
   a.rel = 'noopener';
   a.target = '_blank';
   document.body.appendChild(a);
-
-  // iOS Safari may ignore download attribute for blob URLs. Open a new tab fallback.
-  if (isIOS) {
-    window.open(url, '_blank');
-  } else {
+  try {
     a.click();
+  } finally {
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
   }
-
-  document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 1500);
 }
 
 function renderHistory() {
