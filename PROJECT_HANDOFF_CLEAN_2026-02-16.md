@@ -3,7 +3,7 @@
 기준 경로: `C:\dlatl\WritingEditor`  
 기준 브랜치: `main`  
 원격 저장소: `https://github.com/leydian/WritingEditor`  
-현재 스크립트 로드: `index.html`에서 `app.js?v=57`
+현재 스크립트 로드: `index.html`에서 `app.js?v=58`
 
 ## 1) 현재 상태 한 줄 요약
 
@@ -58,7 +58,7 @@
 
 1. `index.html`
 - 인증 게이트, 툴바, 주요 다이얼로그 DOM 정의
-- `app.js?v=57` 로드
+- `app.js?v=58` 로드
 
 2. `styles.css`
 - 데스크톱/모바일 레이아웃
