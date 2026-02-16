@@ -11,10 +11,10 @@
   <div id="auth-gate" class="auth-gate">
     <div class="auth-card">
       <h2>WritingEditor 로그인</h2>
-      <p>익명으로 시작하거나, 이메일 계정으로 로그인/회원가입할 수 있습니다.</p>
+      <p>익명으로 시작하거나, 아이디 계정으로 로그인/회원가입할 수 있습니다.</p>
       <input id="sb-url" class="hidden" placeholder="https://xxxx.supabase.co" />
       <input id="sb-anon" class="hidden" placeholder="supabase anon key" />
-      <input id="auth-email" type="email" placeholder="이메일" />
+      <input id="auth-email" type="text" placeholder="아이디" />
       <input id="auth-password" type="password" placeholder="비밀번호" />
       <div class="auth-actions">
         <button type="button" id="auth-save-config" class="hidden">설정 저장</button>
@@ -148,7 +148,7 @@
       삭제 후에는 복구가 불가능합니다.
     </p>
     <p class="danger-strong">탈퇴 전, 삭제할 계정을 다시 확인합니다(일반 계정은 재로그인 필요).</p>
-    <input id="withdraw-email" type="email" autocomplete="username" placeholder="탈퇴할 계정 이메일" />
+    <input id="withdraw-email" type="text" autocomplete="username" placeholder="탈퇴할 계정 아이디" />
     <input id="withdraw-password" type="password" autocomplete="current-password" placeholder="비밀번호 (재로그인 확인용)" />
     <ul class="danger-list">
       <li>클라우드 저장 상태(editor_states)가 즉시 삭제됩니다.</li>
@@ -169,8 +169,8 @@
 
   <dialog id="upgrade-dialog">
     <h3>익명 계정 회원가입</h3>
-    <p>이메일/비밀번호를 등록해 현재 익명 계정을 일반 계정으로 전환합니다.</p>
-    <input id="upgrade-email" type="email" autocomplete="email" placeholder="이메일" />
+    <p>아이디/비밀번호를 등록해 현재 익명 계정을 일반 계정으로 전환합니다.</p>
+    <input id="upgrade-email" type="text" autocomplete="username" placeholder="아이디" />
     <input id="upgrade-password" type="password" autocomplete="new-password" placeholder="비밀번호" />
     <div class="danger-actions">
       <button id="upgrade-cancel-btn" type="button">취소</button>
@@ -191,7 +191,7 @@
   <script src="crypto-utils.js?v=1"></script>
   <script src="state-utils.js?v=1"></script>
   <script src="error-utils.js?v=1"></script>
-  <script src="app.js?v=77"></script>
+  <script src="app.js?v=78"></script>
 </body>
 </html>
 

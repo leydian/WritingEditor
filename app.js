@@ -15,6 +15,7 @@ const SUPABASE_SDK_URLS = [
 ];
 const MOBILE_MINI_BREAKPOINT = 900;
 const WITHDRAW_CONFIRM_TEXT = '회원탈퇴';
+const USERNAME_EMAIL_DOMAIN = 'id.writingeditor.local';
 const DEFAULT_SUPABASE_URL = 'https://rvrysnatyimuilarxfft.supabase.co';
 const DEFAULT_SUPABASE_ANON = 'sb_publishable_v_aVOb5bAPP3pr1dF7POBQ_qnxCWVho';
 const EMBEDDED_SUPABASE_URL = (typeof globalThis !== 'undefined' && globalThis.__WE_SUPABASE_URL__)
@@ -376,6 +377,49 @@ function isAnonymousUser(user) {
   if (user.is_anonymous === true) return true;
   const provider = user.app_metadata && user.app_metadata.provider;
   return provider === 'anonymous';
+}
+
+function normalizeUsername(raw) {
+  return String(raw || '').trim().toLowerCase();
+}
+
+function isValidUsername(username) {
+  return /^[a-z0-9](?:[a-z0-9._-]{1,30}[a-z0-9])$/.test(username);
+}
+
+function usernameToSyntheticEmail(username) {
+  return `${username}@${USERNAME_EMAIL_DOMAIN}`;
+}
+
+function isSyntheticEmail(email) {
+  const v = String(email || '').toLowerCase();
+  return v.endsWith(`@${USERNAME_EMAIL_DOMAIN}`);
+}
+
+function resolveIdentifier(inputRaw) {
+  const input = String(inputRaw || '').trim();
+  if (!input) {
+    return { ok: false, message: '아이디를 입력하세요.' };
+  }
+  if (input.includes('@')) {
+    return { ok: true, email: input, username: '' };
+  }
+  const username = normalizeUsername(input);
+  if (!isValidUsername(username)) {
+    return { ok: false, message: '아이디 형식이 올바르지 않습니다. (영문/숫자, 3~32자, ._- 허용)' };
+  }
+  return { ok: true, email: usernameToSyntheticEmail(username), username };
+}
+
+function resolveDisplayIdentity(user) {
+  if (!user || isAnonymousUser(user)) return '익명로그인';
+  const fromMeta = user.user_metadata && typeof user.user_metadata.username === 'string'
+    ? normalizeUsername(user.user_metadata.username)
+    : '';
+  if (fromMeta && isValidUsername(fromMeta)) return fromMeta;
+  const email = String(user.email || '');
+  if (isSyntheticEmail(email)) return email.split('@')[0];
+  return email || '일반로그인';
 }
 
 function openEncryptionUnlockDialog(message = '데이터 암호 해제를 위해 로그인 비밀번호를 입력하세요.') {
@@ -1150,7 +1194,7 @@ function applyAuthState(user) {
   if (user) {
     gate.classList.add('hidden');
     app.style.display = 'grid';
-    $('user-email').textContent = isAnonymousUser(user) ? '익명로그인' : (user.email || '');
+    $('user-email').textContent = resolveDisplayIdentity(user);
     $('auth-status').textContent = '로그인됨';
     if (logoutBtn) {
       const isAnon = isAnonymousUser(user);
@@ -2137,10 +2181,18 @@ async function authSignUp() {
     setAuthStatus('먼저 설정 저장을 눌러 Supabase 연결을 초기화하세요.');
     return;
   }
-  const email = $('auth-email').value.trim();
+  const idRaw = $('auth-email').value.trim();
   const password = $('auth-password').value;
-  const { error } = await supabase.auth.signUp({ email, password });
-  setAuthStatus(error ? error.message : '회원가입 요청 완료. 이메일 인증을 확인하세요.');
+  const resolved = resolveIdentifier(idRaw);
+  if (!resolved.ok) {
+    setAuthStatus(resolved.message);
+    return;
+  }
+  const payload = resolved.username
+    ? { email: resolved.email, password, options: { data: { username: resolved.username } } }
+    : { email: resolved.email, password };
+  const { error } = await supabase.auth.signUp(payload);
+  setAuthStatus(error ? error.message : '회원가입 요청 완료. 아이디로 로그인할 수 있습니다.');
 }
 
 async function authLogin() {
@@ -2148,10 +2200,15 @@ async function authLogin() {
     setAuthStatus('먼저 설정 저장을 눌러 Supabase 연결을 초기화하세요.');
     return;
   }
-  const email = $('auth-email').value.trim();
+  const idRaw = $('auth-email').value.trim();
   const password = $('auth-password').value;
+  const resolved = resolveIdentifier(idRaw);
+  if (!resolved.ok) {
+    setAuthStatus(resolved.message);
+    return;
+  }
   pendingAuthPassword = password || '';
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const { error } = await supabase.auth.signInWithPassword({ email: resolved.email, password });
   if (error) pendingAuthPassword = '';
   setAuthStatus(error ? error.message : '로그인 성공');
 }
@@ -2193,10 +2250,15 @@ async function upgradeAnonymousAccount() {
   }
   const emailInput = $('upgrade-email');
   const passwordInput = $('upgrade-password');
-  const email = emailInput ? emailInput.value.trim() : '';
+  const idRaw = emailInput ? emailInput.value.trim() : '';
   const password = passwordInput ? passwordInput.value : '';
-  if (!email || !password) {
-    setAuthStatus('이메일과 비밀번호를 입력하세요.');
+  if (!idRaw || !password) {
+    setAuthStatus('아이디와 비밀번호를 입력하세요.');
+    return;
+  }
+  const resolved = resolveIdentifier(idRaw);
+  if (!resolved.ok) {
+    setAuthStatus(resolved.message);
     return;
   }
   if (!supabase.auth || typeof supabase.auth.updateUser !== 'function') {
@@ -2204,13 +2266,17 @@ async function upgradeAnonymousAccount() {
     return;
   }
 
-  const { error } = await supabase.auth.updateUser({ email, password });
+  const { error } = await supabase.auth.updateUser({
+    email: resolved.email,
+    password,
+    data: resolved.username ? { username: resolved.username } : undefined,
+  });
   if (error) {
     showUiError('upgrade', error, { auth: true, sync: false, logContext: 'account upgrade failed' });
     return;
   }
   pendingAuthPassword = password || '';
-  const signInResult = await supabase.auth.signInWithPassword({ email, password });
+  const signInResult = await supabase.auth.signInWithPassword({ email: resolved.email, password });
   closeUpgradeDialog();
   if (!signInResult || !signInResult.error) {
     setAuthStatus('회원가입 완료: 자동 로그인되었습니다.');
@@ -2220,7 +2286,7 @@ async function upgradeAnonymousAccount() {
 
   const msg = String(signInResult.error.message || '');
   if (msg.toLowerCase().includes('confirm') || msg.toLowerCase().includes('verified')) {
-    setAuthStatus('회원가입 전환 완료. 이메일 인증 후 자동 로그인됩니다.');
+    setAuthStatus('회원가입 전환 완료. 인증 정책으로 즉시 로그인이 제한되었습니다.');
     return;
   }
   showUiError('upgrade', signInResult.error, { auth: true, sync: false, logContext: 'account upgrade auto sign-in failed' });
@@ -2425,14 +2491,20 @@ async function authWithdraw() {
   const inputEmail = emailInput ? emailInput.value.trim() : '';
   const inputPassword = passwordInput ? passwordInput.value : '';
   if (requiresCredentialReauth && (!inputEmail || !inputPassword)) {
-    setAuthStatus('회원 탈퇴 전, 이메일/비밀번호로 다시 로그인해 계정을 확인하세요.');
+    setAuthStatus('회원 탈퇴 전, 아이디/비밀번호로 다시 로그인해 계정을 확인하세요.');
     return;
   }
 
   let confirmedUser = supabaseUser;
   if (requiresCredentialReauth) {
     setAuthStatus('탈퇴 계정 확인을 위해 재로그인 중...');
-    const signInResult = await supabase.auth.signInWithPassword({ email: inputEmail, password: inputPassword });
+    const resolved = resolveIdentifier(inputEmail);
+    if (!resolved.ok) {
+      setAuthStatus(resolved.message);
+      setSyncStatus('탈퇴 중단: 계정 확인 실패', 'error');
+      return;
+    }
+    const signInResult = await supabase.auth.signInWithPassword({ email: resolved.email, password: inputPassword });
     if (signInResult && signInResult.error) {
       showUiError('withdraw', signInResult.error, { auth: true, sync: false, logContext: 'withdraw re-auth failed' });
       setSyncStatus('탈퇴 중단: 계정 확인 실패', 'error');
@@ -2449,9 +2521,9 @@ async function authWithdraw() {
       return;
     }
     const confirmedEmail = String(confirmedUser.email || '').trim().toLowerCase();
-    if (confirmedEmail && confirmedEmail !== inputEmail.toLowerCase()) {
+    if (confirmedEmail && confirmedEmail !== resolved.email.toLowerCase()) {
       await supabase.auth.signOut();
-      setAuthStatus('입력한 이메일과 로그인된 계정이 다릅니다. 회원 탈퇴를 중단했습니다.');
+      setAuthStatus('입력한 아이디와 로그인된 계정이 다릅니다. 회원 탈퇴를 중단했습니다.');
       setSyncStatus('탈퇴 중단: 계정 불일치', 'error');
       return;
     }
