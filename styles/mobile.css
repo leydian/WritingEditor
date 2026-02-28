@@ -1,0 +1,51 @@
+@media (max-width: 1100px) {
+  .app {
+    height: auto;
+    min-height: 100vh;
+    padding: 8px;
+  }
+
+  .toolbar {
+    border-radius: 12px;
+    margin-bottom: 10px;
+  }
+}
+
+@media (max-width: 900px) {
+  .app {
+    padding: 0;
+  }
+
+  .main {
+    border-radius: 0;
+    border-left: 0;
+    border-right: 0;
+  }
+
+  .toolbar {
+    top: 0;
+    border-radius: 0;
+    padding: 10px;
+  }
+
+  .left-tools,
+  .right-tools {
+    width: 100%;
+  }
+
+  #toggle-sidebar-toolbar-btn,
+  #toggle-calendar-toolbar-btn,
+  #manual-sync-btn,
+  #top-command-btn {
+    flex: 1;
+  }
+
+  .editor-area {
+    padding: 8px;
+  }
+
+  textarea {
+    font-size: 16px;
+    line-height: 1.8;
+  }
+}

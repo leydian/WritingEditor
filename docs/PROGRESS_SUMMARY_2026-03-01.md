@@ -2,7 +2,7 @@
 
 기준 저장소: `https://github.com/leydian/WritingEditor`  
 기준 브랜치: `main`  
-반영 범위: 대화상자 UX 표준화 + 동기화 충돌 UX 개선 + 인증 메시지 표준화 + 조립층 분해 1/2/3/4차
+반영 범위: 대화상자 UX 표준화 + 동기화 충돌 UX 개선 + 인증 메시지 표준화 + 조립층 분해 1/2/3/4차 + Focus Studio UI 재구성 1차
 
 ## 1. 이번 작업 목표
 
@@ -102,6 +102,20 @@
 - 결과:
   - 인증 오케스트레이션이 조립층에서 분리됨
   - 인증 플로우 회귀를 독립 테스트로 검증 가능해짐
+
+### 2.9 Focus Studio UI 재구성 1차
+
+- `styles.css`를 진입점으로 유지하고 `styles/` 계층 분리
+  - `tokens.css`, `base.css`, `layout.css`, `components.css`, `mobile.css`, `legacy.css`
+- 메인 에디터 상단에 Focus Toolbar 추가
+  - 문서 목록/기록 패널 토글
+  - 수동 동기화, 히스토리 열기
+  - 분할 전환(단일/좌우/상하)
+  - TXT/PDF 내보내기
+- `ui-bindings.js`에서 툴바 신규 버튼 이벤트 연결
+- 결과:
+  - 에디터 중심 조작 흐름 강화
+  - 기존 기능 로직 유지한 상태로 UI 전면 재정렬
 
 ## 3. 테스트 결과
 

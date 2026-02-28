@@ -29,9 +29,13 @@
       getCalendarViewMode,
       shiftCalendarMonth,
       closeHistoryDialog,
+      openHistoryDialog,
       ensureTimerInterval,
       renderTimer,
       applyPomodoroMinutesFromInputs,
+      handleManualSync,
+      exportTxt,
+      exportPdf,
       authLogout,
       openUpgradeDialog,
       closeUpgradeDialog,
@@ -62,6 +66,14 @@
     const showCalendarBar = $('show-calendar-bar');
     const sidebarToolbarBtn = $('toggle-sidebar-toolbar-btn');
     const calendarToolbarBtn = $('toggle-calendar-toolbar-btn');
+    const topCommandBtn = $('top-command-btn');
+    const manualSyncBtn = $('manual-sync-btn');
+    const historyOpenBtn = $('history-open-btn');
+    const splitSingleBtn = $('split-single-btn');
+    const splitVerticalBtn = $('split-vertical-btn');
+    const splitHorizontalBtn = $('split-horizontal-btn');
+    const exportTxtBtn = $('export-txt-btn');
+    const exportPdfBtn = $('export-pdf-btn');
     const editorA = $('editor-a');
     const editorB = $('editor-b');
     const goalInput = $('goal-input');
@@ -93,6 +105,7 @@
     const encryptionUnlockCancelBtn = $('encryption-unlock-cancel-btn');
 
     if (commandPaletteBtn) commandPaletteBtn.onclick = openCommandPalette;
+    if (topCommandBtn) topCommandBtn.onclick = openCommandPalette;
     if (toggleTreeBtn) toggleTreeBtn.onclick = () => {
       if (window.innerWidth <= MOBILE_MINI_BREAKPOINT) {
         const mobile = getMobileMiniState();
@@ -200,6 +213,17 @@
     if (calendarNextMonthBtn) calendarNextMonthBtn.onclick = () => shiftCalendarMonth(1);
 
     if (historyCloseBtn) historyCloseBtn.onclick = closeHistoryDialog;
+    if (historyOpenBtn) historyOpenBtn.onclick = openHistoryDialog;
+    if (manualSyncBtn) manualSyncBtn.onclick = () => {
+      void handleManualSync();
+    };
+    if (splitSingleBtn) splitSingleBtn.onclick = () => switchSplit('single');
+    if (splitVerticalBtn) splitVerticalBtn.onclick = () => switchSplit('vertical');
+    if (splitHorizontalBtn) splitHorizontalBtn.onclick = () => switchSplit('horizontal');
+    if (exportTxtBtn) exportTxtBtn.onclick = exportTxt;
+    if (exportPdfBtn) exportPdfBtn.onclick = () => {
+      void exportPdf();
+    };
 
     if (timerToggleBtn) timerToggleBtn.onclick = () => {
       state.pomodoro.running = !state.pomodoro.running;

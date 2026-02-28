@@ -1,7 +1,7 @@
 ﻿# WritingEditor 통합 프로젝트 문서 (단일 기준본)
 
 작성일: 2026-02-16  
-최종 갱신: 2026-03-01 (조립층 분해 3차: 히스토리/타이머 서비스 분리 반영)  
+최종 갱신: 2026-03-01 (세션 플로우 분리 + Focus Studio UI 재구성 반영)  
 기준 경로: `C:\dlatl\WritingEditor`  
 기준 브랜치: `main`  
 원격 저장소: `https://github.com/leydian/WritingEditor`  
@@ -77,6 +77,23 @@
 - `app.js`의 인증 관련 함수는 `SessionFlowService.createSessionFlowActions` 위임 우선으로 변경
 - 테스트 추가:
   - `tests/session-flow-service.test.js`
+
+14. UI 전면 재검토 1차 (2026-03-01)
+- Focus Studio 방향으로 레이아웃/시각 시스템 재정렬
+- `styles.css`를 진입점으로 유지하고 `styles/` 계층으로 분리
+  - `styles/tokens.css`
+  - `styles/base.css`
+  - `styles/layout.css`
+  - `styles/components.css`
+  - `styles/mobile.css`
+  - `styles/legacy.css`(호환 기반)
+- 메인 에디터 영역 상단에 Focus Toolbar 추가
+  - 사이드바/기록 패널 토글
+  - 수동 동기화
+  - 히스토리
+  - 분할(단일/좌우/상하)
+  - TXT/PDF 내보내기
+- `ui-bindings.js`에 툴바 버튼 이벤트 연결 추가(기존 로직 재사용)
 
 8. 동기화 충돌 UX 개선 (2026-03-01)
 - 충돌 분기를 단순 `confirm`에서 명시적 3지선다로 전환
@@ -184,6 +201,7 @@
 - 툴바/중앙 에디터 잔여 블루 톤 제거
 - 익명 로그인 사용자 표시: `익명로그인`
 - 브라우저 기본 대화상자 제거, 공통 모달 기반 상호작용으로 일원화
+- Focus Studio 지향 레이아웃(에디터 우선) 및 상단 툴바 조작 모델 도입
 
 ### 2.9 코드 구조(리팩터링 반영)
 
@@ -197,6 +215,7 @@
 - 히스토리 서비스: `history-service.js`
 - 타이머 서비스: `timer-service.js`
 - 세션 플로우 서비스: `session-flow-service.js`
+- 스타일 계층: `styles/*.css` (token/base/layout/component/mobile + legacy)
 - 상태 정규화/히스토리/뽀모도로 계산: `state-utils.js`
 
 ---

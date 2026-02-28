@@ -3319,9 +3319,13 @@ function bindEvents() {
       const dlg = $('history-dialog');
       if (dlg && typeof dlg.close === 'function') dlg.close();
     },
+    openHistoryDialog,
     ensureTimerInterval,
     renderTimer,
     applyPomodoroMinutesFromInputs,
+    handleManualSync,
+    exportTxt,
+    exportPdf,
     authLogout,
     openUpgradeDialog,
     closeUpgradeDialog,

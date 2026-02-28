@@ -1,0 +1,41 @@
+* {
+  font-family: "IBM Plex Sans KR", "Pretendard", "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+}
+
+body {
+  background:
+    radial-gradient(900px 500px at 8% -15%, rgba(39, 93, 74, .10) 0%, transparent 65%),
+    radial-gradient(700px 420px at 100% 0%, rgba(154, 97, 19, .08) 0%, transparent 60%),
+    linear-gradient(180deg, var(--fx-bg-soft) 0%, var(--fx-bg) 100%);
+  color: var(--fx-ink);
+}
+
+h1, h2, h3, h4 {
+  color: var(--fx-ink);
+  letter-spacing: -.02em;
+}
+
+button,
+input,
+textarea,
+select {
+  border-radius: var(--fx-radius-sm);
+}
+
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 3px solid rgba(39, 93, 74, .35);
+  outline-offset: 1px;
+}
+
+.pill {
+  background: rgba(39, 93, 74, .08);
+  border: 1px solid rgba(39, 93, 74, .26);
+  color: var(--fx-accent-strong);
+}
+
+.hidden-panel {
+  display: none !important;
+}

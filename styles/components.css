@@ -1,0 +1,111 @@
+button,
+input {
+  border: 1px solid var(--fx-border-strong);
+  background: #fff;
+  color: var(--fx-ink);
+  min-height: 38px;
+}
+
+button {
+  font-weight: 600;
+}
+
+button:hover {
+  background: #f4f1e8;
+  border-color: #a99f8a;
+  transform: translateY(-1px);
+  box-shadow: 0 5px 12px rgba(29,32,27,.12);
+}
+
+#command-palette-btn,
+#toggle-sidebar-toolbar-btn,
+#toggle-calendar-toolbar-btn,
+#top-command-btn,
+#manual-sync-btn {
+  background: linear-gradient(180deg, var(--fx-accent) 0%, var(--fx-accent-strong) 100%);
+  color: #edf6f2;
+  border-color: #1f4f3e;
+}
+
+#command-palette-btn:hover,
+#toggle-sidebar-toolbar-btn:hover,
+#toggle-calendar-toolbar-btn:hover,
+#top-command-btn:hover,
+#manual-sync-btn:hover {
+  background: linear-gradient(180deg, #2f725a 0%, #275d4a 100%);
+}
+
+.danger-btn {
+  background: #fff1f1;
+  color: #8c2424;
+  border-color: #d9a8a8;
+}
+
+.tree-item {
+  border-radius: 12px;
+  border: 1px solid transparent;
+}
+
+.tree-item.active,
+.tree-item:hover {
+  background: #f1efe8;
+  border-color: var(--fx-border);
+}
+
+.stats-row,
+.calendar-tools,
+.calendar-view-toggle {
+  border-radius: var(--fx-radius-md);
+}
+
+.timer-box,
+.daily-box,
+.calendar,
+.calendar-table-wrap {
+  border: 1px solid var(--fx-border);
+  background: #fff;
+  box-shadow: var(--fx-shadow-soft);
+}
+
+.day {
+  background: #f8f4ea;
+  border: 1px solid #ddd3bf;
+  color: #4a4f46;
+}
+
+.day.today {
+  background: #fff7dd;
+  border-color: #d4a648;
+}
+
+#sync-status[data-status='pending'] {
+  background: #fff0cf;
+  border-color: #e2b44a;
+  color: #7e4e0f;
+}
+
+#sync-status[data-status='ok'] {
+  background: #e9f7ef;
+  border-color: #7abc9f;
+  color: #1f6b4d;
+}
+
+#sync-status[data-status='error'] {
+  background: #ffe9e9;
+  border-color: #d79b9b;
+  color: #8c2424;
+}
+
+.auth-card,
+.command-palette-dialog,
+.security-dialog,
+#upgrade-dialog,
+.danger-dialog {
+  border-radius: var(--fx-radius-lg);
+  box-shadow: var(--fx-shadow);
+}
+
+#auth-status {
+  line-height: 1.4;
+  color: var(--fx-ink-soft);
+}

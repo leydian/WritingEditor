@@ -8,6 +8,7 @@
 - `app.js`: 앱 부트스트랩/조립 로직(서비스/유틸 연결)
 - `crypto-utils.js`: 암복호화 유틸(AES-GCM + PBKDF2)
 - `styles.css`: 스타일
+- `styles/`: 디자인 토큰/레이아웃/컴포넌트/모바일 분리 스타일 계층
 - `error-utils.js`: 오류 처리 유틸
 - `state-utils.js`: 상태 처리 유틸
 - `auth-service.js`: 인증 세션/탈퇴 서비스 유틸

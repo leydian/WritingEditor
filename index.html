@@ -45,6 +45,22 @@
     <div id="sidebar-resizer" class="sidebar-resizer" aria-hidden="true"></div>
 
     <main class="main">
+      <header class="toolbar">
+        <div class="left-tools">
+          <button id="toggle-sidebar-toolbar-btn" type="button">문서 목록</button>
+          <button id="toggle-calendar-toolbar-btn" type="button">기록 패널</button>
+          <button id="top-command-btn" type="button">명령 팔레트</button>
+        </div>
+        <div class="right-tools">
+          <button id="manual-sync-btn" type="button">지금 동기화</button>
+          <button id="history-open-btn" type="button">히스토리</button>
+          <button id="split-single-btn" type="button">단일</button>
+          <button id="split-vertical-btn" type="button">좌우</button>
+          <button id="split-horizontal-btn" type="button">상하</button>
+          <button id="export-txt-btn" type="button">TXT</button>
+          <button id="export-pdf-btn" type="button">PDF</button>
+        </div>
+      </header>
       <section id="editor-area" class="editor-area single">
         <div id="pane-a" class="pane active">
           <div class="pane-head">왼쪽 문서</div>
@@ -235,7 +251,6 @@
   <script src="app.js?v=92"></script>
 </body>
 </html>
-
 
 
 
