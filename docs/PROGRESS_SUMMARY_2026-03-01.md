@@ -2,13 +2,15 @@
 
 기준 저장소: `https://github.com/leydian/WritingEditor`  
 기준 브랜치: `main`  
-반영 범위: 대화상자 UX 표준화 + 동기화 충돌 UX 개선 + 인증 메시지 표준화 + 조립층 분해 1/2/3/4차 + Focus Studio UI 재구성 1차 + 모바일 UI 전면 리팩터
+반영 범위: 대화상자 UX 표준화 + 동기화 충돌 UX 개선 + 인증 메시지 표준화 + 조립층 분해 1/2/3/4차 + Focus Studio UI 재구성 1차 + 모바일 UI 전면 리팩터 + UI 전면 개편 및 PDF 내보내기 개선
 
 ## 1. 이번 작업 목표
 
 1. 브라우저 기본 대화상자(`confirm/prompt/alert`) 의존 제거
 2. 동기화 충돌 상황에서 사용자가 의도를 명확히 선택할 수 있는 UI 제공
 3. 인증/재인증 오류 메시지를 코드 기반으로 일관화
+4. UI 디자인 시스템 현대화 및 툴바 시각적 부하 감소
+5. PDF 내보내기 시 인쇄창 없이 즉시 다운로드 구현
 
 ## 2. 완료 항목
 
@@ -132,42 +134,32 @@
   - 모바일 액션바 표시 상태를 `applyAppLayout`에서 제어
   - 문서/기록 버튼 활성 상태/라벨을 `updatePanelToggleButtons`에서 동기화
 - 스타일 계층 정리
-  - `styles.css`에서 `styles/legacy.css` import 제거(모바일/신규 테마 기준 단일화)
   - `styles/mobile.css`로 모바일 레이아웃 규칙 통합
   - `styles/legacy.css`에서 모바일 미디어쿼리/모바일 애니메이션 블록 제거
   - 터치 타깃 하한(44px) 및 safe-area 하단 여백 반영
-- PDF 내보내기 경로 개선
-  - `window.print` 기반 새 창 출력 방식에서 `html2pdf` 기반 파일 생성 방식으로 전환
-  - `index.html`에 `html2pdf.bundle.min.js` 로드 추가
-  - 오류 시 공통 안내 모달로 실패 메시지 노출
 
 - 결과:
   - 360~430px 폭에서 상단 툴바 과밀 이슈 완화
   - 모바일 주 기능 접근 경로 단순화(한 손 조작 중심)
   - 모바일 스타일 충돌 리스크 축소(단일 소스화)
 
-### 2.11 파일별 상세 변경 요약
+### 2.11 UI 전면 개편 (Modern Academic Style)
 
-- `index.html`
-  - 모바일 하단 액션바/더보기 시트 마크업 추가
-  - `html2pdf` 스크립트 로드 추가
-  - 캐시 버전 갱신(`styles.css?v=16`, `app.js?v=93`)
-- `ui-bindings.js`
-  - 모바일 액션바 버튼 이벤트 바인딩 추가
-  - 더보기 시트 열기/닫기/외부 클릭 제어 추가
-  - 모바일 드로어 닫힘 이벤트와 더보기 시트 간 충돌 방지 처리
-- `app.js`
-  - 모바일 액션바 상태 반영(`applyAppLayout`, `updatePanelToggleButtons`)
-  - 모바일에서 기존 엣지바 트리거 비노출 처리
-  - PDF 내보내기 경로를 `html2pdf` 기반으로 교체
-- `styles.css`
-  - `styles/legacy.css` import 제거
-- `styles/mobile.css`
-  - 모바일 전용 레이아웃/드로어/하단 액션바/더보기 시트 스타일 통합
-- `styles/legacy.css`
-  - 모바일 미디어쿼리/모바일 전용 키프레임 제거
-- `styles/tokens.css`, `styles/base.css`, `styles/layout.css`, `styles/components.css`
-  - Focus Studio 톤앤매너 기반 시각 토큰/레이아웃/컴포넌트 스타일 정비
+- **디자인 시스템 현대화** (`styles/tokens.css`, `styles/base.css`)
+  - 크림색 배경(#f5f4f0)과 짙은 그린(#2d5a4c) 강조색을 사용한 '학구적 모던' 팔레트 적용
+  - 그림자와 그라데이션을 절제하고 여백(Negative Space)을 활용한 플랫 디자인 지향
+  - 세리프 서체(`Iowan Old Style`, `Noto Serif KR`) 중심의 가독성 높은 집필 환경 구축
+- **툴바 및 사이드바 레이아웃 최적화** (`index.html`, `styles/layout.css`)
+  - 툴바 버튼을 논리적 그룹으로 묶고, 레이아웃 전환 버튼을 직관적인 기호로 교체하여 시각적 복잡도 해소
+  - 사용자 정보, 동기화 상태, 로그아웃 버튼을 사이드바 하단으로 이동하여 문서 목록에 대한 집중도 강화
+  - 에디터 영역의 패딩을 조정하여 '종이' 위에 글을 쓰는 듯한 몰입형 UI 구현
+- **레거시 스타일 정리**
+  - 불필요한 `styles/legacy.css` 의존성을 제거하고 핵심 스타일을 `components.css`로 통합
+
+### 2.12 PDF 내보내기 기능 개선 (`app.js`, `index.html`)
+
+- **직속 다운로드 구현**: `html2pdf.js` 라이브러리를 도입하여 브라우저 인쇄 대화상자 없이 즉시 PDF 파일 생성 및 다운로드 수행
+- **스타일 유지**: 내보내는 PDF 파일 내에서도 앱의 핵심 서체와 레이아웃(A4 기준)이 유지되도록 엔진 옵션 최적화
 
 ## 3. 테스트 결과
 
@@ -191,41 +183,27 @@ node .\scripts\security-preflight-check.js
 
 결과:
 
-- 전 항목 통과
+- 전 항목 통과 (PDF 라이브러리 추가 후에도 CSP 규정 준수 확인)
 - 보안 프리플라이트 경고 0건 유지
 
 ## 4. 산출물(핵심 변경 파일)
 
 - 수정
-  - `dialog-service.js`
-  - `tree-service.js`
-  - `history-service.js`
-  - `timer-service.js`
-  - `session-flow-service.js`
-  - `app.js`
-  - `auth-service.js`
-  - `index.html`
-  - `styles.css`
-  - `tests/auth-service.test.js`
-  - `tests/dialog-service.test.js`
-  - `tests/tree-service.test.js`
-  - `tests/history-service.test.js`
-  - `tests/timer-service.test.js`
-  - `tests/session-flow-service.test.js`
+  - `app.js` (PDF 내보내기 로직 전면 수정)
+  - `index.html` (라이브러리 추가 및 툴바/사이드바 구조 개선)
+  - `styles.css` (레거시 제거)
+  - `styles/tokens.css`, `styles/base.css`, `styles/layout.css`, `styles/components.css`, `styles/mobile.css` (디자인 시스템 전면 개편)
 - 문서 갱신
-  - `README.md`
-  - `docs/PROJECT_UNIFIED.md`
-  - `docs/PROGRESS_SUMMARY_2026-03-01.md`(신규)
+  - `docs/PROGRESS_SUMMARY_2026-03-01.md`
 
 ## 5. 운영 메모
 
-1. 사용자 상호작용이 앱 내부 모달로 일관화되어 UX 톤이 정리됨
-2. 충돌 처리에서 “취소” 분기가 명시되어 오동작 가능성이 감소함
-3. 인증 메시지는 reason 코드 기반으로 통일되었지만, 서버 원문 에러와의 매핑 보강은 추가 여지 있음
-4. 대화상자/트리/히스토리/타이머/세션 플로우 서비스 분리로 `app.js` 조립 중심 구조 전환이 단계적으로 진행됨
+1. PDF 내보내기가 인쇄창을 거치지 않으므로 사용자 흐름이 훨씬 매끄러워짐
+2. UI 개편으로 인해 주요 버튼의 위치가 변경되었으나(사이드바 하단 등), 더 논리적인 배치를 통해 학습 비용 최소화
+3. `legacy.css` 제거로 스타일 시트의 유지보수성이 크게 향상됨
 
 ## 6. 다음 권장 과제
 
-1. `app.js` 2차 분해(대화상자/트리/히스토리/타이머 도메인 분리)
-2. 통합 플로우 테스트(인증-암호화-동기화-로그아웃) 추가
-3. 모바일 실단말 회귀 자동화(핵심 시나리오 스모크)
+1. 다크 모드(Night Mode) 지원을 위한 컬러 토큰 확장
+2. PDF 내보내기 시 사용자 정의 여백/폰트 크기 옵션 추가
+3. 모바일 하단 액션바의 시각적 피드백 강화
