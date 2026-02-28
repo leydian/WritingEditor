@@ -34,6 +34,8 @@ const authConfigService = (typeof AuthConfigService !== 'undefined' && AuthConfi
 const uiBindings = (typeof UiBindings !== 'undefined' && UiBindings) ? UiBindings : null;
 const dialogService = (typeof DialogService !== 'undefined' && DialogService) ? DialogService : null;
 const treeService = (typeof TreeService !== 'undefined' && TreeService) ? TreeService : null;
+const historyService = (typeof HistoryService !== 'undefined' && HistoryService) ? HistoryService : null;
+const timerService = (typeof TimerService !== 'undefined' && TimerService) ? TimerService : null;
 
 function seoulDateParts(date = new Date()) {
   const parts = new Intl.DateTimeFormat('en-CA', {
@@ -87,14 +89,12 @@ function formatKstTimeLabel(date = new Date()) {
 let supabase = null;
 let supabaseUser = null;
 let authSubscription = null;
-let timerRef = null;
 let activePane = 'a';
 let sidebarWidth = 240;
 let calendarWidth = 260;
 let autoSyncTimer = null;
 let autoSyncRetryCount = 0;
 let lastSyncAt = 0;
-let historyAutoTimer = null;
 let hydratingRemoteState = false;
 let lastKnownRemoteUpdatedAt = null;
 let supabaseSdkPromise = null;
@@ -113,6 +113,7 @@ let encryptionUnlockResolver = null;
 let commandPaletteSelection = 0;
 const dirtyDocIds = new Set();
 const layoutPrefs = loadLayoutPrefs();
+const state = loadState();
 const dialogApi = (
   dialogService
   && typeof dialogService.createDialogApi === 'function'
@@ -137,8 +138,33 @@ const treeActions = (
     dirtyDocIds,
   })
   : null;
-
-const state = loadState();
+const historyActions = (
+  historyService
+  && typeof historyService.createHistoryActions === 'function'
+)
+  ? historyService.createHistoryActions({
+    state,
+    stateApi,
+    getDoc,
+    saveState,
+    dirtyDocIds,
+    historyAutoSaveMs: HISTORY_AUTO_SAVE_MS,
+  })
+  : null;
+const timerActions = (
+  timerService
+  && typeof timerService.createTimerActions === 'function'
+)
+  ? timerService.createTimerActions({
+    state,
+    stateApi,
+    todayKey,
+    openNoticeDialog,
+    saveState,
+    updateProgress,
+    getById: $,
+  })
+  : null;
 
 function safeGetItem(key) {
   try {
@@ -1575,6 +1601,9 @@ async function createFolder(parentFolderId = null) {
 }
 
 function cloneStateForHistory() {
+  if (historyActions && typeof historyActions.cloneStateForHistory === 'function') {
+    return historyActions.cloneStateForHistory();
+  }
   if (stateApi && typeof stateApi.cloneStateForHistory === 'function') {
     return stateApi.cloneStateForHistory(state);
   }
@@ -1584,6 +1613,9 @@ function cloneStateForHistory() {
 }
 
 function countParagraphs(text) {
+  if (historyActions && typeof historyActions.countParagraphs === 'function') {
+    return historyActions.countParagraphs(text);
+  }
   return String(text || '')
     .split(/\n\s*\n/g)
     .map((chunk) => chunk.trim())
@@ -1592,6 +1624,9 @@ function countParagraphs(text) {
 }
 
 function getDocContentFromSnapshot(snapshot, docId) {
+  if (historyActions && typeof historyActions.getDocContentFromSnapshot === 'function') {
+    return historyActions.getDocContentFromSnapshot(snapshot, docId);
+  }
   if (!snapshot || !Array.isArray(snapshot.docs)) return '';
   const target = snapshot.docs.find((doc) => doc && doc.id === docId)
     || snapshot.docs.find((doc) => doc && doc.id === snapshot.activeDocA)
@@ -1600,6 +1635,9 @@ function getDocContentFromSnapshot(snapshot, docId) {
 }
 
 function getHistoryDeltaMeta(snapshot, meta = {}) {
+  if (historyActions && typeof historyActions.getHistoryDeltaMeta === 'function') {
+    return historyActions.getHistoryDeltaMeta(snapshot, meta);
+  }
   const docId = meta.docId || state.activeDocA || null;
   const baseline = Array.isArray(state.historyEntries) && state.historyEntries[0]
     ? state.historyEntries[0].snapshot
@@ -1613,12 +1651,19 @@ function getHistoryDeltaMeta(snapshot, meta = {}) {
 }
 
 function formatSignedDelta(value) {
+  if (historyActions && typeof historyActions.formatSignedDelta === 'function') {
+    return historyActions.formatSignedDelta(value);
+  }
   const n = Number(value) || 0;
   if (n > 0) return `+${n}`;
   return String(n);
 }
 
 function addHistoryEntry(trigger, meta = {}, snapshotOverride = null) {
+  if (historyActions && typeof historyActions.addHistoryEntry === 'function') {
+    historyActions.addHistoryEntry(trigger, meta, snapshotOverride);
+    return;
+  }
   const snapshot = snapshotOverride || cloneStateForHistory();
   const deltaMeta = getHistoryDeltaMeta(snapshot, meta);
   const payloadMeta = { ...meta, ...deltaMeta };
@@ -1650,11 +1695,18 @@ function addHistoryEntry(trigger, meta = {}, snapshotOverride = null) {
 }
 
 function markDocDirty(docId) {
+  if (historyActions && typeof historyActions.markDocDirty === 'function') {
+    historyActions.markDocDirty(docId);
+    return;
+  }
   if (!docId) return;
   dirtyDocIds.add(docId);
 }
 
 function flushHistorySnapshots(trigger, options = {}) {
+  if (historyActions && typeof historyActions.flushHistorySnapshots === 'function') {
+    return historyActions.flushHistorySnapshots(trigger, options);
+  }
   const onlyFullSync = !!options.onlyFullSync;
   const ids = [];
   if (!onlyFullSync) {
@@ -1691,10 +1743,10 @@ function flushHistorySnapshots(trigger, options = {}) {
 }
 
 function ensureHistoryAutoSaveInterval() {
-  if (historyAutoTimer) return;
-  historyAutoTimer = setInterval(() => {
-    flushHistorySnapshots('auto-10m', { includeFullSync: true, onlyFullSync: true });
-  }, HISTORY_AUTO_SAVE_MS);
+  if (historyActions && typeof historyActions.ensureHistoryAutoSaveInterval === 'function') {
+    historyActions.ensureHistoryAutoSaveInterval();
+    return;
+  }
 }
 
 function updateEditorPane(pane, value) {
@@ -2391,6 +2443,10 @@ function renderHistory() {
 }
 
 function tickTimer() {
+  if (timerActions && typeof timerActions.tickTimer === 'function') {
+    timerActions.tickTimer();
+    return;
+  }
   if (!state.pomodoro.running) return;
 
   if (stateApi && typeof stateApi.tickPomodoro === 'function') {
@@ -2437,11 +2493,17 @@ function tickTimer() {
 }
 
 function ensureTimerInterval() {
-  if (timerRef) return;
-  timerRef = setInterval(tickTimer, 1000);
+  if (timerActions && typeof timerActions.ensureTimerInterval === 'function') {
+    timerActions.ensureTimerInterval();
+    return;
+  }
 }
 
 function renderTimer() {
+  if (timerActions && typeof timerActions.renderTimer === 'function') {
+    timerActions.renderTimer();
+    return;
+  }
   const sec = state.pomodoro.left;
   const mins = getPomodoroMinutes();
   const focusInput = $('pomodoro-focus-min');
@@ -2455,6 +2517,9 @@ function renderTimer() {
 }
 
 function getPomodoroMinutes() {
+  if (timerActions && typeof timerActions.getPomodoroMinutes === 'function') {
+    return timerActions.getPomodoroMinutes();
+  }
   const base = state && state.pomodoroMinutes && typeof state.pomodoroMinutes === 'object'
     ? state.pomodoroMinutes
     : { focus: 25, break: 5 };
@@ -2471,6 +2536,10 @@ function getPomodoroMinutes() {
 }
 
 function applyPomodoroMinutesFromInputs() {
+  if (timerActions && typeof timerActions.applyPomodoroMinutesFromInputs === 'function') {
+    timerActions.applyPomodoroMinutesFromInputs();
+    return;
+  }
   const focusInput = $('pomodoro-focus-min');
   const breakInput = $('pomodoro-break-min');
   if (!focusInput || !breakInput) return;
@@ -3268,8 +3337,9 @@ async function init() {
     ensureHistoryAutoSaveInterval();
     renderAll();
 
-    if (timerRef) clearInterval(timerRef);
-    timerRef = null;
+    if (timerActions && typeof timerActions.resetTimerInterval === 'function') {
+      timerActions.resetTimerInterval();
+    }
     ensureTimerInterval();
 
     const ok = await setupSupabase();

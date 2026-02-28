@@ -16,6 +16,8 @@
 - `ui-bindings.js`: UI 이벤트 바인딩 모듈
 - `dialog-service.js`: 공통 대화상자(확인/입력/알림/선택) 서비스 모듈
 - `tree-service.js`: 문서/폴더 트리 조작(생성/이동/삭제/이름변경) 서비스 모듈
+- `history-service.js`: 히스토리 스냅샷/자동저장/변경량 계산 서비스 모듈
+- `timer-service.js`: 뽀모도로 타이머/분 설정/표시 렌더링 서비스 모듈
 - `tests/`: 유닛 테스트
 - `scripts/`: 점검/자동화 스크립트
 - `docs/PROJECT_UNIFIED.md`: 단일 기준 운영 문서
@@ -43,6 +45,8 @@ node .\tests\sync-utils.test.js
 node .\tests\ui-bindings.test.js
 node .\tests\dialog-service.test.js
 node .\tests\tree-service.test.js
+node .\tests\history-service.test.js
+node .\tests\timer-service.test.js
 node .\scripts\security-preflight-check.js
 ```
 

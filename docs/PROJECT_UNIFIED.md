@@ -1,7 +1,7 @@
 ﻿# WritingEditor 통합 프로젝트 문서 (단일 기준본)
 
 작성일: 2026-02-16  
-최종 갱신: 2026-03-01 (대화상자 UX/인증 메시지 표준화 작업 반영)  
+최종 갱신: 2026-03-01 (조립층 분해 3차: 히스토리/타이머 서비스 분리 반영)  
 기준 경로: `C:\dlatl\WritingEditor`  
 기준 브랜치: `main`  
 원격 저장소: `https://github.com/leydian/WritingEditor`  
@@ -57,6 +57,16 @@
 - 문서/폴더 트리 도메인을 `tree-service.js`로 분리
 - `app.js`의 트리 관련 CRUD/이동 로직은 `TreeService.createTreeActions` 호출로 위임
 - `tests/tree-service.test.js`로 트리 동작 계약 테스트 추가(생성/삭제/이동 제한)
+
+12. 조립층 분해 3차 (2026-03-01)
+- 히스토리 도메인을 `history-service.js`로 분리
+  - 스냅샷/변경량 계산/더티 문서 플러시/자동 저장 interval 관리
+- 타이머 도메인을 `timer-service.js`로 분리
+  - tick/interval/분 설정/타이머 렌더링
+- `app.js`는 두 도메인에 대해 위임 래퍼로 조립 책임만 유지
+- 테스트 추가:
+  - `tests/history-service.test.js`
+  - `tests/timer-service.test.js`
 
 8. 동기화 충돌 UX 개선 (2026-03-01)
 - 충돌 분기를 단순 `confirm`에서 명시적 3지선다로 전환
@@ -174,6 +184,8 @@
 - UI 이벤트 바인딩: `ui-bindings.js`
 - 대화상자 서비스: `dialog-service.js`
 - 트리 조작 서비스: `tree-service.js`
+- 히스토리 서비스: `history-service.js`
+- 타이머 서비스: `timer-service.js`
 - 상태 정규화/히스토리/뽀모도로 계산: `state-utils.js`
 
 ---
@@ -216,6 +228,8 @@ node .\scripts\security-preflight-check.js
 - `tests/ui-bindings.test.js`
 - `tests/dialog-service.test.js`
 - `tests/tree-service.test.js`
+- `tests/history-service.test.js`
+- `tests/timer-service.test.js`
 
 검증 명령:
 
@@ -229,6 +243,8 @@ node .\tests\sync-utils.test.js
 node .\tests\ui-bindings.test.js
 node .\tests\dialog-service.test.js
 node .\tests\tree-service.test.js
+node .\tests\history-service.test.js
+node .\tests\timer-service.test.js
 node .\scripts\security-preflight-check.js
 ```
 
@@ -297,14 +313,18 @@ node .\tests\auth-service.test.js
 node .\tests\auth-config-service.test.js
 node .\tests\sync-utils.test.js
 node .\tests\ui-bindings.test.js
+node .\tests\dialog-service.test.js
+node .\tests\tree-service.test.js
+node .\tests\history-service.test.js
+node .\tests\timer-service.test.js
 node .\scripts\security-preflight-check.js
 ```
 
 ### 7.2 우선순위 백로그
 
 1. `app.js` 2차 분해
-- 문서 트리/히스토리/타이머/인증 조립 경계 분리
-- 대화상자 공통 API를 별도 모듈로 이동
+- 세션/인증 플로우 도메인 추가 분리(로그인/로그아웃/탈퇴 orchestration)
+- 잔여 조립 코드 축소 및 모듈 로딩 실패 fallback 점검
 
 2. 통합 흐름 테스트 보강
 - 인증-암호화-동기화-로그아웃 시나리오를 계약 테스트로 확장
