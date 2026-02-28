@@ -28,4 +28,10 @@
 
   /* Transitions */
   --fx-transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Layout */
+  --fx-header-h: 52px;
+  --fx-overlay-w-sidebar: 300px;
+  --fx-overlay-w-stats: 340px;
+  --fx-backdrop: rgba(26, 28, 24, 0.35);
 }

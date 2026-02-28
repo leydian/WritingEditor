@@ -2,7 +2,7 @@
 
 기준 저장소: `https://github.com/leydian/WritingEditor`  
 기준 브랜치: `main`  
-반영 범위: 대화상자 UX 표준화 + 동기화 충돌 UX 개선 + 인증 메시지 표준화 + 조립층 분해 1/2/3/4차 + Focus Studio UI 재구성 1차 + 모바일 UI 전면 리팩터 + UI 전면 개편 및 PDF 내보내기 개선
+반영 범위: 대화상자 UX 표준화 + 동기화 충돌 UX 개선 + 인증 메시지 표준화 + 조립층 분해 1/2/3/4차 + Focus Studio UI 재구성 1차 + 모바일 UI 전면 리팩터 + UI 전면 개편 및 PDF 내보내기 개선 + **WritingEditor UI 전면 재설계(에디터 퍼스트/오버레이 패널)**
 
 ## 1. 이번 작업 목표
 
@@ -160,6 +160,75 @@
 
 - **직속 다운로드 구현**: `html2pdf.js` 라이브러리를 도입하여 브라우저 인쇄 대화상자 없이 즉시 PDF 파일 생성 및 다운로드 수행
 - **스타일 유지**: 내보내는 PDF 파일 내에서도 앱의 핵심 서체와 레이아웃(A4 기준)이 유지되도록 엔진 옵션 최적화
+
+### 2.13 WritingEditor UI 전면 재설계 — 에디터 퍼스트 & 오버레이 패널
+
+**배경**: 세 패널(사이드바 | 에디터 | 통계)이 항상 visible한 그리드 구조로 에디터 공간이 좁고 정보 과부하 발생.
+글쓰기 앱의 핵심인 에디터가 주인공이 되는 "에디터 퍼스트" 레이아웃으로 전면 재설계.
+
+#### 레이아웃 구조 변경
+
+| 항목 | 이전 | 이후 |
+|---|---|---|
+| `.app` 배치 방식 | `display: flex` (CSS) + JS가 `display: grid` 오버라이드 | `display: block` (CSS + JS) |
+| 사이드바/통계 | 그리드 칼럼으로 항상 노출 (너비 조절 가능) | `position: fixed` 오버레이, 슬라이드 트랜지션 |
+| 패널 숨김 방식 | `gridTemplateColumns` 칼럼 제거 | `transform: translateX(±100%)` — `display:none` 없음 |
+| 툴바 높이 | 가변 (`padding: 8px 12px`) | 고정 `52px` (`--fx-header-h`) |
+| 1100px 이하 통계 | 강제 숨김 (isCompact) | 사용자 선택 존중 (오버레이이므로 제한 없음) |
+
+#### 세부 변경 파일
+
+**`styles/tokens.css`**
+- `--fx-header-h: 52px` — 슬림 헤더 고정 높이
+- `--fx-overlay-w-sidebar: 300px`, `--fx-overlay-w-stats: 340px` — 오버레이 너비
+- `--fx-backdrop: rgba(26, 28, 24, 0.35)` — 백드롭 색상
+
+**`styles/layout.css`** (전면 재작성)
+- `.app` → `display: block; height: 100vh`
+- `.main` → `width: 100%; height: 100vh; flex-direction: column` — 에디터 100% 너비
+- `.toolbar` → `height: var(--fx-header-h)` 고정
+- `.sidebar` / `.stats-panel` → `position: fixed; z-index: 50; transform: translateX(±100%); transition: 0.22s ease`
+- `.sidebar.hidden-panel` / `.stats-panel.hidden-panel` → `display: flex !important` + 이탈 transform (hidden-panel이 display:none 적용하지 않도록 더 높은 명시도로 오버라이드)
+- `#panel-backdrop` → `position: fixed; z-index: 49; opacity: 0; transition: opacity 0.22s ease`
+- `#panel-backdrop.active` → `opacity: 1; pointer-events: all`
+- `.sidebar-resizer`, `.calendar-resizer` → `display: none` (오버레이에서 리사이즈 불필요)
+
+**`styles/components.css`** (주요 업데이트)
+- 버튼 계층 도입: `.btn-primary` (accent 배경) / `.btn-secondary` (테두리) / `.btn-ghost` (toolbar 버튼)
+- `#toggle-sidebar-toolbar-btn`, `#toggle-calendar-toolbar-btn` → ghost 버튼, `.active` 상태 강조
+- `.toolbar-doc-title` → 현재 문서명 표시 (`overflow: ellipsis`)
+- `.sidebar-close-btn`, `.panel-close-btn` → 패널 우상단 ✕ 버튼
+- 사이드바/통계패널: `overflow-y: auto; padding: 20px` — 풀 높이 스크롤
+- 인증 화면: `.auth-cta-primary` (익명 시작 풀너비 강조 버튼), `.auth-divider` (구분선)
+
+**`styles/mobile.css`** (단순화)
+- `@media (max-width: 1100px)` 블록: `display:none` 강제 숨김 제거 (오버레이가 이미 처리)
+- `@media (max-width: 900px)` 블록: `grid-template-columns` 관련 코드 제거
+- 모바일 드로어 CSS 애니메이션 제거 → layout.css의 transform 트랜지션으로 통합
+- 모바일 액션바/더보기 다이얼로그 스타일 유지
+
+**`index.html`** (구조 변경)
+- 툴바 재구성: 좌측 `[☰][문서명]` / 우측 `[⌘][☁][분할][TXT][PDF][히스토리][📊]`
+- 사이드바 내 `#command-palette-btn` 제거 → 툴바 `#top-command-btn`(⌘)으로 통합
+- 사이드바에 `#sidebar-close-btn` 추가 (✕)
+- 통계패널에 `#panel-close-btn` 추가 (✕)
+- `<div id="panel-backdrop">` 추가 (`</body>` 직전)
+- 인증 화면 CTA 재구성: 익명 시작 버튼 최상단 + `auth-divider` + 로그인/회원가입 폼 하단
+- `styles.css?v=16` → `v=17`, `app.js?v=93` → `v=94`
+
+**`app.js`** (4곳 변경)
+- **A. `applyAppLayout()`**: `gridTemplateColumns`/padding 설정 제거, 백드롭 toggle 추가, `isCompact` 기반 `showCalendar` 제한 제거
+- **B. `bindSidebarResize()`**: 리사이저 mousedown 핸들러 early return (오버레이이므로 드래그 불필요)
+- **C. `bindEvents()`**: `#panel-backdrop`, `#sidebar-close-btn`, `#panel-close-btn` 클릭 핸들러 추가 (mobile-mini 상태 분기 처리 포함)
+- **D. `updatePanelToggleButtons()`**: `isCompact` 분기 완전 제거, 툴바 버튼 `.active` 토글 방식으로 전환
+- 로그인 시 `app.style.display = 'grid'` → `'block'` 변경
+- `applyAppLayout()` 내 `#toolbar-doc-title` 텍스트 업데이트 추가 (`state.activeDocA` 기반)
+
+#### 시각적 효과
+- **에디터 100% 너비** → 글쓰기 집중도 향상
+- **오버레이 dim** → 패널 열림 시 에디터와의 명확한 시각적 분리
+- **슬림 헤더(52px)** → 수직 공간 확보
+- **인증 화면 CTA 계층** → 익명 시작이 주 동작으로 명확히 구분
 
 ## 3. 테스트 결과
 

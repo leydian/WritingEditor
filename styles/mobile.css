@@ -1,43 +1,22 @@
+/* ── Tablet: sidebar/stats already fixed overlay, no grid changes needed ── */
 @media (max-width: 1100px) {
-  .app {
-    height: auto;
-    min-height: 100vh;
-    padding: 8px;
-  }
-
-  .stats-panel,
-  .calendar-resizer {
-    display: none;
-  }
+  /* No layout overrides needed — panels are fixed overlays */
 }
 
 @media (max-width: 900px) {
   .app {
-    grid-template-columns: 1fr !important;
-    grid-auto-rows: auto;
     min-height: 100vh;
     padding: 0 0 calc(72px + env(safe-area-inset-bottom, 0px));
   }
 
-  .sidebar {
-    border-bottom: 1px solid var(--fx-border);
-    max-height: 34vh;
-  }
-
   .main {
-    min-height: 66vh;
     border-radius: 0;
-    border-left: 0;
-    border-right: 0;
-    border-bottom: 0;
   }
 
   .toolbar {
     display: none;
   }
 
-  .sidebar-resizer,
-  .calendar-resizer,
   .editor-split-resizer,
   .edge-bar {
     display: none !important;
@@ -67,34 +46,19 @@
     font-size: 16px;
   }
 
+  /* Mobile-mini sidebar drawer: narrower width, stronger shadow */
   .mobile-mini .sidebar {
-    position: fixed;
-    top: 0;
-    bottom: 0;
-    left: 0;
     width: min(86vw, 340px);
-    max-height: none;
-    border-right: 1px solid var(--fx-border);
-    border-bottom: none;
-    z-index: 60;
     box-shadow: 18px 0 42px rgba(2, 8, 23, .3);
-    animation: mobileDrawerInLeft .16s ease-out;
   }
 
+  /* Mobile-mini stats panel drawer */
   .mobile-mini.mobile-mini-calendar-open .stats-panel {
-    position: fixed;
-    top: 0;
-    bottom: 0;
-    right: 0;
     width: min(88vw, 360px);
-    display: block !important;
-    max-height: none;
-    z-index: 60;
-    border-left: 1px solid var(--fx-border);
     box-shadow: -18px 0 42px rgba(2, 8, 23, .24);
-    animation: mobileDrawerInRight .16s ease-out;
   }
 
+  /* ── Mobile Action Bar ── */
   .mobile-action-bar {
     position: fixed;
     left: 10px;
@@ -118,6 +82,8 @@
     padding: 8px 6px;
     font-size: 12px;
     font-weight: 700;
+    background: transparent;
+    border-color: transparent;
   }
 
   .mobile-action-bar button.active {
@@ -182,26 +148,4 @@
   }
 }
 
-@keyframes mobileDrawerInLeft {
-  from {
-    transform: translateX(-16px);
-    opacity: .9;
-  }
-
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-@keyframes mobileDrawerInRight {
-  from {
-    transform: translateX(16px);
-    opacity: .9;
-  }
-
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
+/* Slide animations handled by CSS transitions in layout.css */

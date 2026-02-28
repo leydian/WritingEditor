@@ -1392,7 +1392,7 @@ function applyAuthState(user) {
   const showCalendarBar = $('show-calendar-bar');
   if (user) {
     gate.classList.add('hidden');
-    app.style.display = 'grid';
+    app.style.display = 'block';
     $('user-email').textContent = resolveDisplayIdentity(user);
     $('auth-status').textContent = '로그인됨';
     if (logoutBtn) {
@@ -3193,44 +3193,28 @@ function updatePanelToggleButtons() {
   const mobileDocBtn = $('mobile-doc-btn');
   const mobileCalendarBtn = $('mobile-calendar-btn');
   const isMobileMini = window.innerWidth <= MOBILE_MINI_BREAKPOINT;
-  const isCompact = window.innerWidth <= 1100;
   const showSidebar = isMobileMini ? mobileMiniSidebarOpen : !!layoutPrefs.showSidebar;
-  const showCalendar = isMobileMini ? mobileMiniCalendarOpen : (!!layoutPrefs.showCalendar && !isCompact);
+  const showCalendar = isMobileMini ? mobileMiniCalendarOpen : !!layoutPrefs.showCalendar;
 
   if (treeBtn) {
-    if (isMobileMini) {
-      treeBtn.textContent = '✕';
-      treeBtn.title = '문서 목록 닫기';
-      treeBtn.setAttribute('aria-label', '문서 목록 닫기');
-    } else {
-      treeBtn.textContent = '◀';
-      treeBtn.title = '문서 목록 숨기기';
-      treeBtn.setAttribute('aria-label', '문서 목록 숨기기');
-    }
+    treeBtn.textContent = '✕';
+    treeBtn.title = '닫기';
+    treeBtn.setAttribute('aria-label', '문서 목록 닫기');
   }
   if (calendarBtn) {
-    calendarBtn.textContent = '▶';
-    calendarBtn.title = '달력 숨기기';
-    calendarBtn.setAttribute('aria-label', '달력 숨기기');
+    calendarBtn.textContent = '✕';
+    calendarBtn.title = '닫기';
+    calendarBtn.setAttribute('aria-label', '달력 패널 닫기');
   }
   if (sidebarToolbarBtn) {
-    if (isMobileMini) sidebarToolbarBtn.textContent = showSidebar ? '문서목록 닫기' : '문서목록';
-    else sidebarToolbarBtn.textContent = showSidebar ? '문서 목록 숨기기' : '문서 목록 보이기';
+    sidebarToolbarBtn.classList.toggle('active', showSidebar);
+    sidebarToolbarBtn.title = showSidebar ? '문서 목록 닫기' : '문서 목록 열기';
   }
   if (calendarToolbarBtn) {
-    if (isMobileMini) {
-      calendarToolbarBtn.textContent = showCalendar ? '달력 닫기' : '달력';
-      calendarToolbarBtn.disabled = false;
-      calendarToolbarBtn.title = showCalendar ? '오른쪽 달력 패널 닫기' : '오른쪽 달력 패널 보기';
-    } else if (isCompact) {
-      calendarToolbarBtn.textContent = '달력(넓은 화면)';
-      calendarToolbarBtn.disabled = true;
-      calendarToolbarBtn.title = '달력 패널은 넓은 화면에서만 표시됩니다.';
-    } else {
-      calendarToolbarBtn.textContent = showCalendar ? '달력 숨기기' : '달력 보이기';
-      calendarToolbarBtn.disabled = false;
-      calendarToolbarBtn.title = showCalendar ? '오른쪽 달력 패널 숨기기' : '오른쪽 달력 패널 보이기';
-    }
+    calendarToolbarBtn.textContent = '📊';
+    calendarToolbarBtn.disabled = false;
+    calendarToolbarBtn.classList.toggle('active', showCalendar);
+    calendarToolbarBtn.title = showCalendar ? '기록 패널 닫기' : '기록 패널 열기';
   }
   if (mobileDocBtn) {
     mobileDocBtn.textContent = showSidebar ? '문서 닫기' : '문서';
@@ -3253,14 +3237,12 @@ function applyAppLayout() {
   const showTreeBar = $('show-tree-bar');
   const showCalendarBar = $('show-calendar-bar');
   const mobileActionBar = $('mobile-action-bar');
+  const backdrop = $('panel-backdrop');
   if (!app || !sidebar || !sidebarResizer || !calendarResizer || !statsPanel) return;
 
-  const isCompact = window.innerWidth <= 1100;
   const isMobileMini = window.innerWidth <= MOBILE_MINI_BREAKPOINT;
   const showSidebar = isMobileMini ? mobileMiniSidebarOpen : !!layoutPrefs.showSidebar;
-  const showCalendar = isMobileMini ? mobileMiniCalendarOpen : (!!layoutPrefs.showCalendar && !isCompact);
-  const leftBarSpace = showSidebar ? 0 : 16;
-  const rightBarSpace = showCalendar ? 0 : (isCompact ? 0 : 16);
+  const showCalendar = isMobileMini ? mobileMiniCalendarOpen : !!layoutPrefs.showCalendar;
 
   document.body.classList.toggle('mobile-mini', isMobileMini);
   document.body.classList.toggle('mobile-mini-calendar-open', isMobileMini && showCalendar);
@@ -3268,26 +3250,34 @@ function applyAppLayout() {
   sidebarResizer.classList.toggle('hidden-panel', !showSidebar);
   calendarResizer.classList.toggle('hidden-panel', !showCalendar);
   statsPanel.classList.toggle('hidden-panel', !showCalendar);
+
+  // Backdrop: show when any overlay is open (desktop) or mobile drawer is open
+  if (backdrop) {
+    const anyOpen = showSidebar || showCalendar;
+    backdrop.classList.toggle('active', anyOpen);
+  }
+
   if (showTreeBar) {
-    if (isMobileMini) showTreeBar.classList.add('hidden');
-    else showTreeBar.classList.toggle('hidden', showSidebar);
-    showTreeBar.setAttribute('aria-label', isMobileMini ? '문서 목록 열기' : '문서 목록 보이기');
-    showTreeBar.title = isMobileMini ? '문서 목록 열기' : '문서 목록 보이기';
+    showTreeBar.classList.add('hidden');
   }
   if (showCalendarBar) {
-    if (isMobileMini) showCalendarBar.classList.add('hidden');
-    else showCalendarBar.classList.toggle('hidden', showCalendar || isCompact);
+    showCalendarBar.classList.add('hidden');
   }
   if (mobileActionBar) {
     mobileActionBar.classList.toggle('hidden', !isMobileMini);
   }
 
-  if (showSidebar && showCalendar) app.style.gridTemplateColumns = `${sidebarWidth}px 8px 1fr 8px ${calendarWidth}px`;
-  else if (showSidebar && !showCalendar) app.style.gridTemplateColumns = `${sidebarWidth}px 8px 1fr`;
-  else if (!showSidebar && showCalendar) app.style.gridTemplateColumns = `1fr 8px ${calendarWidth}px`;
-  else app.style.gridTemplateColumns = '1fr';
-  app.style.paddingLeft = `${leftBarSpace}px`;
-  app.style.paddingRight = `${rightBarSpace}px`;
+  // Sidebar/stats are fixed overlays — no grid columns needed
+  app.style.gridTemplateColumns = '';
+  app.style.paddingLeft = '';
+  app.style.paddingRight = '';
+
+  // Update toolbar document title
+  const docTitleEl = $('toolbar-doc-title');
+  if (docTitleEl && state && state.activeDocA) {
+    const activeDoc = getDoc(state.activeDocA);
+    docTitleEl.textContent = activeDoc && activeDoc.name ? activeDoc.name : '새 문서';
+  }
 
   updatePanelToggleButtons();
 }
@@ -3364,6 +3354,53 @@ function bindEvents() {
     },
     switchSplit,
   });
+
+  // Backdrop click: close all open overlays
+  const backdrop = $('panel-backdrop');
+  if (backdrop) {
+    backdrop.addEventListener('click', () => {
+      const isMobileMini = window.innerWidth <= MOBILE_MINI_BREAKPOINT;
+      if (isMobileMini) {
+        mobileMiniSidebarOpen = false;
+        mobileMiniCalendarOpen = false;
+      } else {
+        layoutPrefs.showSidebar = false;
+        layoutPrefs.showCalendar = false;
+        saveLayoutPrefs();
+      }
+      applyAppLayout();
+    });
+  }
+
+  // Sidebar close button
+  const sidebarCloseBtn = $('sidebar-close-btn');
+  if (sidebarCloseBtn) {
+    sidebarCloseBtn.addEventListener('click', () => {
+      const isMobileMini = window.innerWidth <= MOBILE_MINI_BREAKPOINT;
+      if (isMobileMini) {
+        mobileMiniSidebarOpen = false;
+      } else {
+        layoutPrefs.showSidebar = false;
+        saveLayoutPrefs();
+      }
+      applyAppLayout();
+    });
+  }
+
+  // Stats panel close button
+  const panelCloseBtn = $('panel-close-btn');
+  if (panelCloseBtn) {
+    panelCloseBtn.addEventListener('click', () => {
+      const isMobileMini = window.innerWidth <= MOBILE_MINI_BREAKPOINT;
+      if (isMobileMini) {
+        mobileMiniCalendarOpen = false;
+      } else {
+        layoutPrefs.showCalendar = false;
+        saveLayoutPrefs();
+      }
+      applyAppLayout();
+    });
+  }
 }
 
 function bindSidebarResize() {
@@ -3380,14 +3417,17 @@ function bindSidebarResize() {
   if (!Number.isNaN(savedCalendar)) calendarWidth = Math.max(220, Math.min(520, savedCalendar));
 
   leftHandle.addEventListener('mousedown', (e) => {
+    // Panels are fixed overlays — no resize drag needed
+    return;
     if (!layoutPrefs.showSidebar) return;
     e.preventDefault();
     draggingLeft = true;
     document.body.style.userSelect = 'none';
   });
   rightHandle.addEventListener('mousedown', (e) => {
-    const isCompact = window.innerWidth <= 1100;
-    if (isCompact || !layoutPrefs.showCalendar) return;
+    // Panels are fixed overlays — no resize drag needed
+    return;
+    if (!layoutPrefs.showCalendar) return;
     e.preventDefault();
     draggingRight = true;
     document.body.style.userSelect = 'none';

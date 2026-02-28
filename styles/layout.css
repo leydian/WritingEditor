@@ -1,49 +1,30 @@
+/* ── App Shell ── */
 .app {
-  padding: 10px;
-  gap: 12px;
+  display: block;
   height: 100vh;
-  min-height: 720px;
-  display: flex;
-  box-sizing: border-box;
 }
 
-.sidebar,
-.stats-panel,
+/* ── Main Column (editor + toolbar) ── */
 .main {
-  border: 1px solid var(--fx-border);
-  border-radius: var(--fx-radius-lg);
-  box-shadow: var(--fx-shadow-soft);
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   background: var(--fx-surface-strong);
-  transition: var(--fx-transition);
 }
 
-.sidebar,
-.stats-panel {
-  width: 280px;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.main {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  border-color: var(--fx-border-strong);
-}
-
+/* ── Slim Toolbar ── */
 .toolbar {
+  height: var(--fx-header-h);
+  min-height: var(--fx-header-h);
+  flex-shrink: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 12px;
+  padding: 0 12px;
   border-bottom: 1px solid var(--fx-border);
   background: var(--fx-surface);
-  position: sticky;
-  top: 0;
   z-index: 10;
 }
 
@@ -51,14 +32,15 @@
 .right-tools {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
 
+/* ── Editor Area ── */
 .editor-area {
   flex: 1;
   min-height: 0;
   padding: 20px;
-  background: #fdfcf9;
+  background: var(--fx-surface-strong);
   display: flex;
   gap: 20px;
 }
@@ -106,8 +88,82 @@ textarea {
   box-sizing: border-box;
 }
 
+/* ── Sidebar Overlay ── */
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: var(--fx-overlay-w-sidebar);
+  z-index: 50;
+  transform: translateX(-100%);
+  transition: transform 0.22s ease;
+  display: flex;
+  flex-direction: column;
+  background: var(--fx-surface-strong);
+  border-right: 1px solid var(--fx-border);
+  box-shadow: 4px 0 24px rgba(26, 28, 24, 0.12);
+}
+
+/* Override legacy hidden-panel display:none for sidebar */
+.sidebar.hidden-panel {
+  display: flex !important;
+  transform: translateX(-100%);
+}
+
+.sidebar:not(.hidden-panel) {
+  transform: translateX(0);
+}
+
+/* ── Stats Panel Overlay ── */
+.stats-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: var(--fx-overlay-w-stats);
+  z-index: 50;
+  transform: translateX(100%);
+  transition: transform 0.22s ease;
+  display: flex;
+  flex-direction: column;
+  background: var(--fx-surface-strong);
+  border-left: 1px solid var(--fx-border);
+  box-shadow: -4px 0 24px rgba(26, 28, 24, 0.12);
+}
+
+/* Override legacy hidden-panel display:none for stats-panel */
+.stats-panel.hidden-panel {
+  display: flex !important;
+  transform: translateX(100%);
+}
+
+.stats-panel:not(.hidden-panel) {
+  transform: translateX(0);
+}
+
+/* ── Panel Backdrop ── */
+#panel-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 49;
+  background: var(--fx-backdrop);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.22s ease;
+}
+
+#panel-backdrop.active {
+  opacity: 1;
+  pointer-events: all;
+}
+
+/* ── Resizers: hidden (overlay layout, no resize needed) ── */
 .sidebar-resizer,
-.calendar-resizer,
+.calendar-resizer {
+  display: none;
+}
+
 .editor-split-resizer {
   width: 4px;
   margin: 0 -2px;
@@ -117,8 +173,6 @@ textarea {
   background: transparent;
 }
 
-.sidebar-resizer:hover,
-.calendar-resizer:hover,
 .editor-split-resizer:hover {
   background: var(--fx-accent-soft);
 }

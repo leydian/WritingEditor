@@ -1,6 +1,6 @@
-/* Global Components */
+/* ── Global Buttons ── */
 button {
-  padding: 6px 12px;
+  padding: 5px 10px;
   border: 1px solid var(--fx-border);
   border-radius: var(--fx-radius-sm);
   background: #fff;
@@ -11,8 +11,9 @@ button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  font-size: 0.9rem;
+  gap: 5px;
+  font-size: 0.875rem;
+  white-space: nowrap;
 }
 
 button:hover {
@@ -30,37 +31,140 @@ button:disabled {
   cursor: not-allowed;
 }
 
-/* Primary / Accent Buttons */
-#command-palette-btn,
-#top-command-btn,
-#manual-sync-btn,
-#auth-login,
-#auth-signup,
+/* ── Button Hierarchy ── */
+
+/* Primary: accent background */
+.btn-primary,
 #auth-anon-login {
   background: var(--fx-accent);
   color: #fff;
   border-color: var(--fx-accent-strong);
 }
 
-#command-palette-btn:hover,
-#top-command-btn:hover,
-#manual-sync-btn:hover,
-#auth-login:hover,
-#auth-signup:hover,
+.btn-primary:hover,
 #auth-anon-login:hover {
   background: var(--fx-accent-strong);
+  border-color: var(--fx-accent-strong);
 }
 
-/* Sidebar Specific */
+/* Secondary: border only */
+.btn-secondary,
+#auth-login,
+#auth-signup {
+  background: #fff;
+  color: var(--fx-accent);
+  border-color: var(--fx-accent);
+}
+
+.btn-secondary:hover,
+#auth-login:hover,
+#auth-signup:hover {
+  background: var(--fx-accent-soft);
+}
+
+/* Ghost: toolbar icon buttons */
+.btn-ghost,
+#top-command-btn,
+#manual-sync-btn,
+#toggle-sidebar-toolbar-btn,
+#toggle-calendar-toolbar-btn,
+#history-open-btn,
+#export-txt-btn,
+#export-pdf-btn,
+#split-single-btn,
+#split-vertical-btn,
+#split-horizontal-btn {
+  background: transparent;
+  border-color: transparent;
+  color: var(--fx-ink-soft);
+  padding: 5px 8px;
+}
+
+.btn-ghost:hover,
+#top-command-btn:hover,
+#manual-sync-btn:hover,
+#toggle-sidebar-toolbar-btn:hover,
+#toggle-calendar-toolbar-btn:hover,
+#history-open-btn:hover,
+#export-txt-btn:hover,
+#export-pdf-btn:hover,
+#split-single-btn:hover,
+#split-vertical-btn:hover,
+#split-horizontal-btn:hover {
+  background: var(--fx-bg-soft);
+  border-color: var(--fx-border);
+  color: var(--fx-ink);
+}
+
+/* Active toolbar buttons */
+#toggle-sidebar-toolbar-btn.active,
+#toggle-calendar-toolbar-btn.active {
+  background: var(--fx-accent-soft);
+  border-color: var(--fx-accent);
+  color: var(--fx-accent);
+}
+
+/* ── Toolbar Doc Title ── */
+.toolbar-doc-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--fx-ink);
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 4px 8px;
+  border-radius: var(--fx-radius-sm);
+}
+
+/* ── Toolbar Pill Group (split buttons) ── */
+.pill-group {
+  display: flex;
+  gap: 2px;
+  background: var(--fx-bg-soft);
+  padding: 2px;
+  border-radius: var(--fx-radius-sm);
+}
+
+/* ── Sidebar Close Button ── */
+.sidebar-close-btn,
+.panel-close-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 999px;
+  background: transparent;
+  border-color: transparent;
+  font-size: 14px;
+  color: var(--fx-ink-soft);
+  z-index: 1;
+}
+
+.sidebar-close-btn:hover,
+.panel-close-btn:hover {
+  background: var(--fx-bg-soft);
+  border-color: var(--fx-border);
+  color: var(--fx-ink);
+}
+
+/* ── Sidebar Specific ── */
 .sidebar {
   padding: 16px;
-  gap: 16px;
+  gap: 0;
+  overflow-y: auto;
+  position: relative;
 }
 
 .sidebar-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding-right: 36px; /* space for close btn */
+  margin-bottom: 12px;
+  padding-top: 4px;
 }
 
 .sidebar-header h1 {
@@ -70,18 +174,11 @@ button:disabled {
   color: var(--fx-accent);
 }
 
-.sidebar-menu {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--fx-border);
-}
-
 .tree {
   flex: 1;
   overflow-y: auto;
   padding-right: 4px;
+  margin-bottom: 12px;
 }
 
 .sidebar-footer {
@@ -145,7 +242,7 @@ button:disabled {
   min-height: auto;
 }
 
-/* Calendar Internal Styles */
+/* ── Calendar Internal Styles ── */
 .calendar {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -188,10 +285,82 @@ button:disabled {
   opacity: 0.4;
 }
 
-/* Stats Panel Header & Tools */
+/* ── Stats Panel Specific ── */
+.stats-panel {
+  padding: 20px;
+  gap: 20px;
+  overflow-y: auto;
+  position: relative;
+}
+
+.stats-row {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 32px; /* space for close btn */
+}
+
+.stats-panel-header {
+  padding-right: 36px; /* space for close btn */
+}
+
 .stats-panel-header h2 {
   font-size: 1.1rem;
   margin-bottom: 12px;
+}
+
+.timer-box {
+  background: var(--fx-surface);
+  border: 1px solid var(--fx-border);
+  border-radius: var(--fx-radius-md);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.timer-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.timer-status-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+#timer-display {
+  font-size: 2.4rem;
+  font-weight: 700;
+  font-family: monospace;
+  color: var(--fx-accent);
+}
+
+.timer-display {
+  font-size: 2.4rem;
+  font-weight: 700;
+  text-align: center;
+  font-family: monospace;
+  color: var(--fx-accent);
+}
+
+.daily-box {
+  background: var(--fx-surface);
+  border: 1px solid var(--fx-border);
+  border-radius: var(--fx-radius-md);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+#daily-stats {
+  font-size: 0.85rem;
+  color: var(--fx-ink-soft);
+  white-space: pre-line;
 }
 
 .calendar-tools {
@@ -218,36 +387,6 @@ button:disabled {
   text-align: center;
 }
 
-/* Stats Panel Specific */
-.stats-panel {
-  padding: 16px;
-  gap: 20px;
-}
-
-.timer-box {
-  background: var(--fx-surface);
-  border: 1px solid var(--fx-border);
-  border-radius: var(--fx-radius-md);
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.timer-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.timer-display {
-  font-size: 2.4rem;
-  font-weight: 700;
-  text-align: center;
-  font-family: monospace;
-  color: var(--fx-accent);
-}
-
 .calendar {
   flex: 1;
   border: 1px solid var(--fx-border);
@@ -256,7 +395,7 @@ button:disabled {
   padding: 8px;
 }
 
-/* Auth Card */
+/* ── Auth Card ── */
 .auth-gate {
   position: fixed;
   inset: 0;
@@ -268,20 +407,42 @@ button:disabled {
 }
 
 .auth-card {
-  width: 380px;
-  padding: 32px;
+  width: 400px;
+  padding: 36px;
   background: #fff;
   border-radius: var(--fx-radius-lg);
   box-shadow: var(--fx-shadow);
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
 }
 
 .auth-card h2 {
   margin: 0;
   font-size: 1.5rem;
   text-align: center;
+}
+
+.auth-cta-primary {
+  width: 100%;
+  padding: 14px 20px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  background: var(--fx-accent);
+  color: #fff;
+  border-color: var(--fx-accent-strong);
+  border-radius: var(--fx-radius-md);
+}
+
+.auth-cta-primary:hover {
+  background: var(--fx-accent-strong);
+}
+
+.auth-divider {
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--fx-ink-soft);
+  position: relative;
 }
 
 .auth-card input {
@@ -291,7 +452,19 @@ button:disabled {
   font-size: 1rem;
 }
 
-/* Utils */
+.auth-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.auth-actions button {
+  flex: 1;
+  min-width: 80px;
+  padding: 10px;
+}
+
+/* ── Utils ── */
 .pill {
   padding: 4px 10px;
   border-radius: 999px;

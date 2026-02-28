@@ -1,12 +1,12 @@
 ﻿# WritingEditor 통합 프로젝트 문서 (단일 기준본)
 
 작성일: 2026-02-16  
-최종 갱신: 2026-03-01 (모바일 UI 전면 리팩터 반영)  
-기준 경로: `C:\dlatl\WritingEditor`  
-기준 브랜치: `main`  
-원격 저장소: `https://github.com/leydian/WritingEditor`  
-현재 앱 버전: `index.html` -> `app.js?v=93`  
-현재 스타일 버전: `index.html` -> `styles.css?v=16`
+최종 갱신: 2026-03-01 (에디터 퍼스트 오버레이 패널 전면 재설계 반영)
+기준 경로: `C:\dlatl\WritingEditor`
+기준 브랜치: `main`
+원격 저장소: `https://github.com/leydian/WritingEditor`
+현재 앱 버전: `index.html` -> `app.js?v=94`
+현재 스타일 버전: `index.html` -> `styles.css?v=17`
 
 ## 0. 진행현황 요약 (이번 사이클)
 
@@ -112,6 +112,18 @@
 - PDF 내보내기 경로를 `html2pdf` 기반으로 전환
   - `window.print` 새 창 방식 제거
   - 실패 시 공통 안내 모달로 오류 노출
+
+16. 에디터 퍼스트 오버레이 패널 전면 재설계 (2026-03-01)
+- 3단 그리드 구조 폐기 → 에디터가 항상 100% 너비 사용
+- 사이드바/통계 패널 → `position: fixed` 오버레이, `transform` 슬라이드 토글
+- `#panel-backdrop` 추가 — 패널 열림 시 에디터 위에 반투명 dim
+- 툴바 재구성: 좌측 `[☰][문서명]` / 우측 `[⌘][☁][분할][TXT][PDF][히스토리][📊]`
+- 사이드바 `#command-palette-btn` 제거 → 툴바 ⌘ 버튼으로 통합
+- 패널별 ✕ 닫기 버튼 추가 (`#sidebar-close-btn`, `#panel-close-btn`)
+- 인증 화면 CTA 재구성: 익명 시작 풀너비 버튼 최상단, 로그인 폼 하단
+- `isCompact` 기반 통계 패널 강제 숨김 제거 (오버레이이므로 화면 너비 무관)
+- `styles/tokens.css` 레이아웃 변수 4개 추가, `styles/mobile.css` 단순화
+- `app.js?v=94`, `styles.css?v=17`
 
 8. 동기화 충돌 UX 개선 (2026-03-01)
 - 충돌 분기를 단순 `confirm`에서 명시적 3지선다로 전환

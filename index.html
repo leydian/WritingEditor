@@ -1,26 +1,26 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://unpkg.com; connect-src 'self' https://*.supabase.co; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'" />
   <title>WritingEditor Prototype</title>
-  <link rel="stylesheet" href="styles.css?v=16" />
+  <link rel="stylesheet" href="styles.css?v=17" />
 </head>
 <body>
   <div id="auth-gate" class="auth-gate">
     <div class="auth-card">
-      <h2>WritingEditor 로그인</h2>
-      <p>익명으로 시작하거나, 아이디 계정으로 로그인/회원가입할 수 있습니다.</p>
+      <h2>WritingEditor</h2>
+      <button type="button" id="auth-anon-login" class="auth-cta-primary">익명으로 바로 시작 →</button>
+      <div class="auth-divider">──── 계정이 있으신가요? ────</div>
       <input id="sb-url" class="hidden" placeholder="https://xxxx.supabase.co" />
       <input id="sb-anon" class="hidden" placeholder="supabase anon key" />
       <input id="auth-email" type="text" placeholder="아이디" />
       <input id="auth-password" type="password" placeholder="비밀번호" />
       <div class="auth-actions">
         <button type="button" id="auth-save-config" class="hidden">설정 저장</button>
-        <button type="button" id="auth-signup">회원가입</button>
         <button type="button" id="auth-login">로그인</button>
-        <button type="button" id="auth-anon-login">익명으로 시작</button>
+        <button type="button" id="auth-signup">회원가입</button>
         <button type="button" id="withdraw-btn" class="danger-btn hidden">회원 탈퇴</button>
       </div>
       <small id="auth-status"></small>
@@ -28,8 +28,8 @@
   </div>
 
   <div id="app" class="app">
-    <aside id="sidebar" class="sidebar">
-      <button id="command-palette-btn" class="sidebar-command-btn" type="button" title="명령 팔레트 (Ctrl/Cmd+K)">명령 팔레트</button>
+    <aside id="sidebar" class="sidebar hidden-panel">
+      <button class="sidebar-close-btn" id="sidebar-close-btn" type="button" title="닫기" aria-label="사이드바 닫기">✕</button>
       <div class="sidebar-header">
         <h1>문서 목록</h1>
         <button id="toggle-tree-btn" class="panel-icon-btn" type="button" title="문서 목록 숨기기" aria-label="문서 목록 숨기기">◀</button>
@@ -51,20 +51,21 @@
     <main class="main">
       <header class="toolbar">
         <div class="left-tools">
-          <button id="toggle-sidebar-toolbar-btn" type="button">문서 목록</button>
-          <button id="toggle-calendar-toolbar-btn" type="button">기록 패널</button>
-          <button id="top-command-btn" type="button">명령 팔레트</button>
+          <button id="toggle-sidebar-toolbar-btn" type="button" title="문서 목록">☰</button>
+          <span class="toolbar-doc-title" id="toolbar-doc-title">새 문서</span>
         </div>
         <div class="right-tools">
-          <button id="manual-sync-btn" type="button" title="지금 동기화">동기화</button>
-          <button id="history-open-btn" type="button">히스토리</button>
-          <div class="pill-group" style="display: flex; gap: 2px; background: var(--fx-bg-soft); padding: 2px; border-radius: var(--fx-radius-sm);">
-            <button id="split-single-btn" type="button" style="border:none; background:transparent; padding: 4px 8px;" title="단일 창">▯</button>
-            <button id="split-vertical-btn" type="button" style="border:none; background:transparent; padding: 4px 8px;" title="좌우 분할">▯|▯</button>
-            <button id="split-horizontal-btn" type="button" style="border:none; background:transparent; padding: 4px 8px;" title="상하 분할">▤</button>
+          <button id="top-command-btn" type="button" title="명령 팔레트 (Ctrl/Cmd+K)">⌘</button>
+          <button id="manual-sync-btn" type="button" title="지금 동기화">☁</button>
+          <div class="pill-group">
+            <button id="split-single-btn" type="button" title="단일 창">▯</button>
+            <button id="split-vertical-btn" type="button" title="좌우 분할">▯|▯</button>
+            <button id="split-horizontal-btn" type="button" title="상하 분할">▤</button>
           </div>
           <button id="export-txt-btn" type="button">TXT</button>
           <button id="export-pdf-btn" type="button">PDF</button>
+          <button id="history-open-btn" type="button">히스토리</button>
+          <button id="toggle-calendar-toolbar-btn" type="button" title="기록 패널">📊</button>
         </div>
       </header>
       <section id="editor-area" class="editor-area single">
@@ -81,7 +82,8 @@
     </main>
 
     <div id="calendar-resizer" class="calendar-resizer" aria-hidden="true"></div>
-    <aside class="stats-panel">
+    <aside class="stats-panel hidden-panel">
+      <button class="panel-close-btn" id="panel-close-btn" type="button" title="닫기" aria-label="기록 패널 닫기">✕</button>
       <section class="stats-row">
         <div class="timer-box">
           <div class="timer-head">
@@ -137,6 +139,8 @@
       <p>● 목표 달성일</p>
     </aside>
   </div>
+
+  <div id="panel-backdrop"></div>
 
   <button id="show-tree-bar" class="edge-bar left hidden" type="button" title="문서 목록 보이기" aria-label="문서 목록 보이기"></button>
   <button id="show-calendar-bar" class="edge-bar right hidden" type="button" title="달력 보이기" aria-label="달력 보이기"></button>
@@ -277,10 +281,6 @@
   <script src="timer-service.js?v=1"></script>
   <script src="session-flow-service.js?v=1"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
-  <script src="app.js?v=93"></script>
+  <script src="app.js?v=94"></script>
 </body>
 </html>
-
-
-
-
