@@ -230,6 +230,40 @@
 - **슬림 헤더(52px)** → 수직 공간 확보
 - **인증 화면 CTA 계층** → 익명 시작이 주 동작으로 명확히 구분
 
+### 2.14 오버레이 패널 위치 버그 및 상하분할 수정
+
+**배경**: 에디터 퍼스트 재설계(2.13) 직후 발견된 4가지 회귀 버그 수정.
+
+#### 버그 목록 및 원인
+
+| # | 증상 | 근본 원인 |
+|---|---|---|
+| 1 | 뽀모도로 타이머 보이지 않음 | `components.css`의 `.stats-panel { position: relative }`가 `layout.css`의 `position: fixed`를 덮어씀 → 패널이 인라인 블록으로 렌더링 |
+| 2 | 일일 달성기록 보이지 않음 | 동일 원인 — 통계 패널 자체가 fixed 오버레이가 아닌 인라인 블록 |
+| 3 | 문서목록이 페이지 상단에 표시 | `components.css`의 `.sidebar { position: relative }`가 `layout.css`의 `position: fixed`를 덮어씀 → 사이드바가 `#app` 블록 내 최상단에 흘러내림 |
+| 4 | 상하분할 동작 안 함 | `.editor-area`가 `display: flex`였으나 `applyEditorSplitLayout()`이 `gridTemplateRows`를 설정 → flex 컨테이너에는 grid 속성 무효 |
+
+#### 수정 내용
+
+**`styles/components.css`**
+- `.sidebar`: `position: relative` 제거 (layout.css의 `position: fixed` 유효화)
+- `.stats-panel`: `position: relative` 제거 (동일)
+- `position: fixed` 요소는 positioned context를 제공하므로 내부 `position: absolute` 닫기 버튼은 정상 동작 유지
+
+**`styles/layout.css`**
+- `.editor-area`: `display: flex; gap: 20px` → `display: grid; grid-template-columns: 1fr; grid-template-rows: 1fr; gap: 0`
+  - JS의 `gridTemplateColumns`/`gridTemplateRows` 인라인 설정이 이제 정상 적용
+  - 상하분할: `grid-template-rows: ratio% 8px (100-ratio)%` → pane-a/resizer/pane-b 순서로 수직 배치
+  - 좌우분할: `grid-template-columns: ratio% 8px (100-ratio)%` → pane-a/resizer/pane-b 순서로 수평 배치
+- `.pane`: `flex: 1` 제거 → `min-width: 0; min-height: 0` 추가 (grid 자식 overflow 방지)
+- `.editor-split-resizer`: 방향별 스타일 분리
+  - `.editor-area.vertical .editor-split-resizer`: `cursor: col-resize; width: 8px`
+  - `.editor-area.horizontal .editor-split-resizer`: `cursor: row-resize; height: 8px`
+
+#### CSS 명시도 충돌 교훈
+
+`styles.css`는 `layout.css` → `components.css` 순서로 import한다. `components.css`에 선언된 동명 선택자의 속성은 `layout.css`를 덮어쓴다. 오버레이 패널의 `position` 등 구조적 속성은 반드시 한 파일에만 선언해야 한다.
+
 ## 3. 테스트 결과
 
 실행 항목:

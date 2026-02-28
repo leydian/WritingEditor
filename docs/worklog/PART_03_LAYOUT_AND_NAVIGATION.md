@@ -108,3 +108,35 @@ auth-card:
 - ✕ 버튼 클릭 → 해당 패널만 닫힘
 - 타이머, 달력, 동기화, 히스토리 정상 동작 확인
 
+---
+
+## 6) 오버레이 패널 CSS 명시도 버그 수정 (2026-03-01)
+
+### 발견된 버그 4건
+
+1. **사이드바 상단 노출**: `components.css`의 `.sidebar { position: relative }`가 `layout.css`의 `position: fixed`를 덮어씀
+2. **뽀모도로 타이머 미표시**: `.stats-panel { position: relative }` → fixed 오버레이 아닌 인라인 블록 렌더링
+3. **일일 달성기록 미표시**: 동일 원인
+4. **상하분할 불작동**: `.editor-area { display: flex }`였으나 JS가 `gridTemplateRows` 설정 → flex에 grid 속성 무효
+
+### 수정
+
+```css
+/* components.css — position 선언 제거 (layout.css가 담당) */
+.sidebar     { /* position: relative 제거 */ }
+.stats-panel { /* position: relative 제거 */ }
+
+/* layout.css — editor-area grid 전환 */
+.editor-area { display: grid; grid-template-columns: 1fr; grid-template-rows: 1fr; }
+.pane        { min-width: 0; min-height: 0; }  /* grid 자식 overflow 방지 */
+
+/* 방향별 리사이저 커서 */
+.editor-area.vertical  .editor-split-resizer { cursor: col-resize; width: 8px; }
+.editor-area.horizontal .editor-split-resizer { cursor: row-resize; height: 8px; }
+```
+
+### 교훈
+
+CSS import 순서(`layout.css` → `components.css`)로 인해 동명 선택자의 후행 파일이 우선한다.
+`position`, `display` 등 구조적 속성은 한 파일에만 선언한다.
+

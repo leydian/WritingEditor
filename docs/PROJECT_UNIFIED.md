@@ -113,6 +113,13 @@
   - `window.print` 새 창 방식 제거
   - 실패 시 공통 안내 모달로 오류 노출
 
+17. 오버레이 패널 CSS 명시도 버그 및 상하분할 수정 (2026-03-01)
+- `components.css`의 `.sidebar`/`.stats-panel`에 `position: relative` 선언이 `layout.css`의 `position: fixed`를 덮어써 패널이 인라인 블록으로 렌더링되던 문제 수정
+  - 증상: 사이드바 상단 노출, 뽀모도로 타이머/일일기록 미표시
+- `editor-area`를 `display: flex` → `display: grid`로 변경
+  - JS의 `gridTemplateRows` 설정이 이제 정상 적용 → 상하분할(top-bottom) 동작
+- 리사이저에 방향별 커서 스타일 추가 (`col-resize`/`row-resize`)
+
 16. 에디터 퍼스트 오버레이 패널 전면 재설계 (2026-03-01)
 - 3단 그리드 구조 폐기 → 에디터가 항상 100% 너비 사용
 - 사이드바/통계 패널 → `position: fixed` 오버레이, `transform` 슬라이드 토글
