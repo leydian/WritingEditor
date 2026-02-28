@@ -619,6 +619,21 @@ textarea:focus { outline: none; }
   color: var(--text-soft);
 }
 
+#confirm-dialog-message,
+#input-dialog-message,
+#notice-dialog-message,
+#choice-dialog-message {
+  margin: 8px 0 10px;
+  color: var(--text-soft);
+  line-height: 1.5;
+  white-space: pre-line;
+}
+
+#input-dialog-value {
+  width: 100%;
+  margin: 0 0 10px;
+}
+
 #encryption-unlock-password {
   width: 100%;
   margin: 0 0 10px;
@@ -913,6 +928,5 @@ textarea:focus { outline: none; }
   from { transform: translateX(14px); opacity: .92; }
   to { transform: translateX(0); opacity: 1; }
 }
-
 
 

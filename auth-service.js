@@ -7,6 +7,23 @@
     root.AuthService = api;
   }
 }(typeof globalThis !== 'undefined' ? globalThis : this, () => {
+  function getErrorMessage(errorLike) {
+    return String((errorLike && errorLike.message) || errorLike || '').trim();
+  }
+
+  function classifyAuthErrorReason(errorLike) {
+    const msg = getErrorMessage(errorLike).toLowerCase();
+    if (!msg) return 'UNKNOWN';
+    if (msg.includes('network') || msg.includes('fetch') || msg.includes('timeout')) return 'NETWORK';
+    if (msg.includes('too many requests') || msg.includes('rate')) return 'RATE_LIMIT';
+    if (msg.includes('invalid login credentials') || msg.includes('invalid password')) return 'INVALID_CREDENTIALS';
+    if (msg.includes('already registered') || msg.includes('already exists') || msg.includes('duplicate')) return 'IDENTIFIER_TAKEN';
+    if (msg.includes('invalid') && (msg.includes('email') || msg.includes('identifier'))) return 'INVALID_IDENTIFIER';
+    if (msg.includes('password') && (msg.includes('weak') || msg.includes('least') || msg.includes('length') || msg.includes('short'))) return 'WEAK_PASSWORD';
+    if (msg.includes('jwt') && msg.includes('expired')) return 'SESSION_EXPIRED';
+    return 'UNKNOWN';
+  }
+
   function isJwtExpiredError(errorLike) {
     const msg = String((errorLike && errorLike.message) || errorLike || '').toLowerCase();
     return msg.includes('jwt') && msg.includes('expired');
@@ -122,7 +139,12 @@
       }
       const signInResult = await supabase.auth.signInWithPassword({ email: resolved.email, password: inputPassword });
       if (signInResult && signInResult.error) {
-        return { ok: false, code: 'reauth_failed', error: signInResult.error };
+        return {
+          ok: false,
+          code: 'reauth_failed',
+          reason: classifyAuthErrorReason(signInResult.error),
+          error: signInResult.error,
+        };
       }
 
       const sessionResult = await supabase.auth.getSession();
@@ -163,7 +185,7 @@
       ? { email: resolved.email, password, options: { data: { username: resolved.username } } }
       : { email: resolved.email, password };
     const { error } = await supabase.auth.signUp(payload);
-    if (error) return { ok: false, code: 'signup_error', error };
+    if (error) return { ok: false, code: 'signup_error', reason: classifyAuthErrorReason(error), error };
     return { ok: true, code: 'ok' };
   }
 
@@ -177,7 +199,7 @@
       return { ok: false, code: 'invalid_identifier', message: resolved && resolved.message ? resolved.message : '' };
     }
     const { error } = await supabase.auth.signInWithPassword({ email: resolved.email, password });
-    if (error) return { ok: false, code: 'login_error', error };
+    if (error) return { ok: false, code: 'login_error', reason: classifyAuthErrorReason(error), error };
     return { ok: true, code: 'ok' };
   }
 
@@ -211,7 +233,7 @@
       password,
       data: resolved.username ? { username: resolved.username } : undefined,
     });
-    if (error) return { ok: false, code: 'update_error', error };
+    if (error) return { ok: false, code: 'update_error', reason: classifyAuthErrorReason(error), error };
 
     if (typeof onBeforeAutoSignIn === 'function') onBeforeAutoSignIn({ password, resolved });
     const signInResult = await supabase.auth.signInWithPassword({ email: resolved.email, password });
@@ -221,7 +243,13 @@
     if (msg.includes('confirm') || msg.includes('verified')) {
       return { ok: false, code: 'auto_signin_limited', closeDialog: true };
     }
-    return { ok: false, code: 'auto_signin_error', error: signInResult.error, closeDialog: true };
+    return {
+      ok: false,
+      code: 'auto_signin_error',
+      reason: classifyAuthErrorReason(signInResult.error),
+      error: signInResult.error,
+      closeDialog: true,
+    };
   }
 
   async function anonymousLogin(supabase) {
@@ -232,7 +260,7 @@
       return { ok: false, code: 'unsupported_anonymous' };
     }
     const { error } = await supabase.auth.signInAnonymously();
-    if (error) return { ok: false, code: 'login_error', error };
+    if (error) return { ok: false, code: 'login_error', reason: classifyAuthErrorReason(error), error };
     return { ok: true, code: 'ok' };
   }
 

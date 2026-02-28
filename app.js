@@ -108,6 +108,10 @@ let pendingAuthPassword = '';
 let pendingEncryptedLocalState = null;
 let localEncryptedWriteSeq = 0;
 let encryptionUnlockResolver = null;
+let confirmDialogResolver = null;
+let inputDialogResolver = null;
+let noticeDialogResolver = null;
+let choiceDialogResolver = null;
 let commandPaletteSelection = 0;
 const dirtyDocIds = new Set();
 const layoutPrefs = loadLayoutPrefs();
@@ -425,6 +429,199 @@ function resolveDisplayIdentity(user) {
   const email = String(user.email || '');
   if (isSyntheticEmail(email)) return email.split('@')[0];
   return email || '일반로그인';
+}
+
+function closeDialogSafe(dialog) {
+  if (!dialog || typeof dialog.close !== 'function') return;
+  if (dialog.open) dialog.close();
+}
+
+function settleDialogResolver(kind, value) {
+  if (kind === 'confirm' && confirmDialogResolver) {
+    const resolve = confirmDialogResolver;
+    confirmDialogResolver = null;
+    resolve(!!value);
+    return;
+  }
+  if (kind === 'input' && inputDialogResolver) {
+    const resolve = inputDialogResolver;
+    inputDialogResolver = null;
+    resolve(value);
+    return;
+  }
+  if (kind === 'notice' && noticeDialogResolver) {
+    const resolve = noticeDialogResolver;
+    noticeDialogResolver = null;
+    resolve();
+    return;
+  }
+  if (kind === 'choice' && choiceDialogResolver) {
+    const resolve = choiceDialogResolver;
+    choiceDialogResolver = null;
+    resolve(value || 'cancel');
+  }
+}
+
+async function openConfirmDialog(options = {}) {
+  const dialog = $('confirm-dialog');
+  const title = $('confirm-dialog-title');
+  const message = $('confirm-dialog-message');
+  const cancelBtn = $('confirm-dialog-cancel-btn');
+  const confirmBtn = $('confirm-dialog-confirm-btn');
+  if (!dialog || !cancelBtn || !confirmBtn || typeof dialog.showModal !== 'function') {
+    return false;
+  }
+  if (title) title.textContent = options.title || '확인';
+  if (message) message.textContent = options.message || '';
+  cancelBtn.textContent = options.cancelText || '취소';
+  confirmBtn.textContent = options.confirmText || '확인';
+  confirmBtn.classList.toggle('danger-btn', !!options.danger);
+  cancelBtn.onclick = () => {
+    settleDialogResolver('confirm', false);
+    closeDialogSafe(dialog);
+  };
+  confirmBtn.onclick = () => {
+    settleDialogResolver('confirm', true);
+    closeDialogSafe(dialog);
+  };
+  dialog.oncancel = () => {
+    settleDialogResolver('confirm', false);
+  };
+  if (dialog.open) dialog.close();
+  dialog.showModal();
+  return new Promise((resolve) => {
+    confirmDialogResolver = resolve;
+  });
+}
+
+async function openInputDialog(options = {}) {
+  const dialog = $('input-dialog');
+  const title = $('input-dialog-title');
+  const message = $('input-dialog-message');
+  const input = $('input-dialog-value');
+  const cancelBtn = $('input-dialog-cancel-btn');
+  const confirmBtn = $('input-dialog-confirm-btn');
+  if (!dialog || !input || !cancelBtn || !confirmBtn || typeof dialog.showModal !== 'function') {
+    return null;
+  }
+  if (title) title.textContent = options.title || '입력';
+  if (message) message.textContent = options.message || '';
+  input.value = options.defaultValue || '';
+  input.placeholder = options.placeholder || '';
+  cancelBtn.textContent = options.cancelText || '취소';
+  confirmBtn.textContent = options.confirmText || '확인';
+  cancelBtn.onclick = () => {
+    settleDialogResolver('input', null);
+    closeDialogSafe(dialog);
+  };
+  confirmBtn.onclick = () => {
+    settleDialogResolver('input', input.value);
+    closeDialogSafe(dialog);
+  };
+  dialog.oncancel = () => {
+    settleDialogResolver('input', null);
+  };
+  if (dialog.open) dialog.close();
+  dialog.showModal();
+  setTimeout(() => {
+    input.focus();
+    input.select();
+  }, 0);
+  return new Promise((resolve) => {
+    inputDialogResolver = resolve;
+  });
+}
+
+async function openNoticeDialog(options = {}) {
+  const dialog = $('notice-dialog');
+  const title = $('notice-dialog-title');
+  const message = $('notice-dialog-message');
+  const closeBtn = $('notice-dialog-close-btn');
+  if (!dialog || !closeBtn || typeof dialog.showModal !== 'function') return;
+  if (title) title.textContent = options.title || '안내';
+  if (message) message.textContent = options.message || '';
+  closeBtn.textContent = options.closeText || '확인';
+  closeBtn.onclick = () => {
+    settleDialogResolver('notice');
+    closeDialogSafe(dialog);
+  };
+  dialog.oncancel = () => {
+    settleDialogResolver('notice');
+  };
+  if (dialog.open) dialog.close();
+  dialog.showModal();
+  return new Promise((resolve) => {
+    noticeDialogResolver = resolve;
+  });
+}
+
+async function openChoiceDialog(options = {}) {
+  const dialog = $('choice-dialog');
+  const title = $('choice-dialog-title');
+  const message = $('choice-dialog-message');
+  const primaryBtn = $('choice-dialog-primary-btn');
+  const secondaryBtn = $('choice-dialog-secondary-btn');
+  const cancelBtn = $('choice-dialog-cancel-btn');
+  if (
+    !dialog
+    || !primaryBtn
+    || !secondaryBtn
+    || !cancelBtn
+    || typeof dialog.showModal !== 'function'
+  ) {
+    return 'cancel';
+  }
+  const choices = options.choices || {};
+  if (title) title.textContent = options.title || '선택';
+  if (message) message.textContent = options.message || '';
+  primaryBtn.textContent = (choices.primary && choices.primary.label) || '확인';
+  secondaryBtn.textContent = (choices.secondary && choices.secondary.label) || '다른 선택';
+  cancelBtn.textContent = (choices.cancel && choices.cancel.label) || '취소';
+  primaryBtn.onclick = () => {
+    settleDialogResolver('choice', (choices.primary && choices.primary.value) || 'primary');
+    closeDialogSafe(dialog);
+  };
+  secondaryBtn.onclick = () => {
+    settleDialogResolver('choice', (choices.secondary && choices.secondary.value) || 'secondary');
+    closeDialogSafe(dialog);
+  };
+  cancelBtn.onclick = () => {
+    settleDialogResolver('choice', (choices.cancel && choices.cancel.value) || 'cancel');
+    closeDialogSafe(dialog);
+  };
+  dialog.oncancel = () => {
+    settleDialogResolver('choice', (choices.cancel && choices.cancel.value) || 'cancel');
+  };
+  if (dialog.open) dialog.close();
+  dialog.showModal();
+  return new Promise((resolve) => {
+    choiceDialogResolver = resolve;
+  });
+}
+
+function resolveAuthResultMessage(flow, result) {
+  const reason = result && result.reason ? result.reason : '';
+  if (flow === 'signup') {
+    if (reason === 'IDENTIFIER_TAKEN') return '이미 사용 중인 아이디입니다.';
+    if (reason === 'WEAK_PASSWORD') return '비밀번호 정책을 확인하세요. (길이/복잡도 부족)';
+    if (reason === 'INVALID_IDENTIFIER') return '아이디 형식을 다시 확인하세요.';
+    if (reason === 'RATE_LIMIT') return '요청이 너무 많습니다. 잠시 후 다시 시도하세요.';
+    if (reason === 'NETWORK') return '네트워크 오류입니다. 연결을 확인한 뒤 다시 시도하세요.';
+    return '회원가입에 실패했습니다. 잠시 후 다시 시도하세요.';
+  }
+  if (flow === 'login') {
+    if (reason === 'INVALID_CREDENTIALS') return '아이디 또는 비밀번호가 올바르지 않습니다.';
+    if (reason === 'INVALID_IDENTIFIER') return '아이디 형식을 다시 확인하세요.';
+    if (reason === 'RATE_LIMIT') return '로그인 시도가 많습니다. 잠시 후 다시 시도하세요.';
+    if (reason === 'NETWORK') return '네트워크 오류입니다. 연결을 확인한 뒤 다시 시도하세요.';
+    return '로그인에 실패했습니다. 잠시 후 다시 시도하세요.';
+  }
+  if (flow === 'withdraw-reauth') {
+    if (reason === 'INVALID_CREDENTIALS') return '탈퇴 확인 실패: 아이디 또는 비밀번호가 올바르지 않습니다.';
+    if (reason === 'NETWORK') return '탈퇴 확인 실패: 네트워크 상태를 확인하고 다시 시도하세요.';
+    return '탈퇴 확인 실패: 계정 인증에 실패했습니다.';
+  }
+  return '요청 처리에 실패했습니다.';
 }
 
 function openEncryptionUnlockDialog(message = '데이터 암호 해제를 위해 로그인 비밀번호를 입력하세요.') {
@@ -1002,10 +1199,22 @@ async function pushRemoteState(options = {}) {
     );
   if (hasConflict) {
     const conflictMsg = `원격 변경 감지: 다른 기기에서 ${new Date(remoteUpdatedAt).toLocaleString()}에 수정되었습니다.`;
-    const overwrite = confirm(`${conflictMsg}\n로컬 상태로 덮어쓸까요? (취소 시 최신 원격 상태를 불러옵니다)`);
-    if (!overwrite) {
+    const conflictAction = await openChoiceDialog({
+      title: '동기화 충돌 감지',
+      message: `${conflictMsg}\n어떤 상태를 유지할지 선택하세요.`,
+      choices: {
+        primary: { label: '로컬로 덮어쓰기', value: 'overwrite_remote' },
+        secondary: { label: '원격 상태 불러오기', value: 'keep_remote' },
+        cancel: { label: '동기화 취소', value: 'cancel' },
+      },
+    });
+    if (conflictAction === 'keep_remote') {
       await pullRemoteState();
       setSyncStatus('충돌 감지: 최신 원격 상태를 불러왔습니다.', 'ok');
+      return false;
+    }
+    if (conflictAction !== 'overwrite_remote') {
+      setSyncStatus('동기화를 취소했습니다.', 'idle');
       return false;
     }
   }
@@ -1406,20 +1615,32 @@ function getDescendantFolderIds(folderId) {
   return result;
 }
 
-function renameDoc(docId) {
+async function renameDoc(docId) {
   const doc = getDoc(docId);
   if (!doc) return;
-  const name = prompt('문서 이름 변경', doc.name);
+  const name = await openInputDialog({
+    title: '문서 이름 변경',
+    message: '새 문서 이름을 입력하세요.',
+    defaultValue: doc.name,
+    confirmText: '변경',
+    cancelText: '취소',
+  });
   if (!name || !name.trim()) return;
   doc.name = name.trim();
   saveState();
   renderAll();
 }
 
-function renameFolder(folderId) {
+async function renameFolder(folderId) {
   const folder = getFolder(folderId);
   if (!folder) return;
-  const name = prompt('폴더 이름 변경', folder.name);
+  const name = await openInputDialog({
+    title: '폴더 이름 변경',
+    message: '새 폴더 이름을 입력하세요.',
+    defaultValue: folder.name,
+    confirmText: '변경',
+    cancelText: '취소',
+  });
   if (!name || !name.trim()) return;
   folder.name = name.trim();
   saveState();
@@ -1439,10 +1660,17 @@ function ensureAtLeastOneDoc() {
   state.activeDocB = null;
 }
 
-function deleteDoc(docId) {
+async function deleteDoc(docId) {
   const doc = getDoc(docId);
   if (!doc) return;
-  if (!confirm(`문서 "${doc.name}"를 삭제할까요?`)) return;
+  const shouldDelete = await openConfirmDialog({
+    title: '문서 삭제 확인',
+    message: `문서 "${doc.name}"를 삭제할까요?`,
+    confirmText: '삭제',
+    cancelText: '취소',
+    danger: true,
+  });
+  if (!shouldDelete) return;
   addHistoryEntry('doc-delete', {
     scope: 'doc',
     docId: doc.id,
@@ -1463,13 +1691,20 @@ function deleteDoc(docId) {
   renderAll();
 }
 
-function deleteFolder(folderId) {
+async function deleteFolder(folderId) {
   const folder = getFolder(folderId);
   if (!folder) return;
   const folderIds = [folderId, ...getDescendantFolderIds(folderId)];
   const docsInFolders = state.docs.filter((d) => folderIds.includes(d.folderId));
   const msg = `폴더 "${folder.name}" 및 하위 폴더/문서 ${docsInFolders.length}개를 삭제할까요?`;
-  if (!confirm(msg)) return;
+  const shouldDelete = await openConfirmDialog({
+    title: '폴더 삭제 확인',
+    message: msg,
+    confirmText: '삭제',
+    cancelText: '취소',
+    danger: true,
+  });
+  if (!shouldDelete) return;
   addHistoryEntry('folder-delete', {
     scope: 'folder',
     summary: `폴더 삭제: ${folder.name} (문서 ${docsInFolders.length}개 포함)`,
@@ -1500,12 +1735,15 @@ function moveDocToFolder(docId, folderId) {
   renderTree();
 }
 
-function moveFolderToFolder(folderId, targetParentId) {
+async function moveFolderToFolder(folderId, targetParentId) {
   const folder = getFolder(folderId);
   if (!folder) return;
   if (folderId === targetParentId) return;
   if (targetParentId && getDescendantFolderIds(folderId).includes(targetParentId)) {
-    alert('하위 폴더 안으로는 이동할 수 없습니다.');
+    await openNoticeDialog({
+      title: '이동 불가',
+      message: '하위 폴더 안으로는 이동할 수 없습니다.',
+    });
     return;
   }
   folder.parentFolderId = targetParentId;
@@ -1513,29 +1751,43 @@ function moveFolderToFolder(folderId, targetParentId) {
   renderTree();
 }
 
-function createDoc(folderId) {
-  const name = prompt('문서 이름', '새 문서.txt');
-  if (!name) return;
+async function createDoc(folderId) {
+  const name = await openInputDialog({
+    title: '문서 생성',
+    message: '새 문서 이름을 입력하세요.',
+    defaultValue: '새 문서.txt',
+    confirmText: '생성',
+    cancelText: '취소',
+  });
+  if (!name || !name.trim()) return;
   const id = `d${Date.now()}`;
-  state.docs.push({ id, name, folderId, content: '' });
+  const nextName = name.trim();
+  state.docs.push({ id, name: nextName, folderId, content: '' });
   state.activeDocA = id;
   addHistoryEntry('doc-create', {
     scope: 'doc',
     docId: id,
-    docName: name,
-    summary: `문서 생성: ${name}`,
+    docName: nextName,
+    summary: `문서 생성: ${nextName}`,
   });
   saveState();
   renderAll();
 }
 
-function createFolder(parentFolderId = null) {
-  const name = prompt('폴더 이름', '새 폴더');
-  if (!name) return;
-  state.folders.push({ id: `f${Date.now()}`, name, parentFolderId });
+async function createFolder(parentFolderId = null) {
+  const name = await openInputDialog({
+    title: '폴더 생성',
+    message: '새 폴더 이름을 입력하세요.',
+    defaultValue: '새 폴더',
+    confirmText: '생성',
+    cancelText: '취소',
+  });
+  if (!name || !name.trim()) return;
+  const nextName = name.trim();
+  state.folders.push({ id: `f${Date.now()}`, name: nextName, parentFolderId });
   addHistoryEntry('folder-create', {
     scope: 'folder',
-    summary: `폴더 생성: ${name}`,
+    summary: `폴더 생성: ${nextName}`,
   });
   saveState();
   renderTree();
@@ -2155,13 +2407,16 @@ function exportTxt() {
   downloadBlob(blob, `${d.name.replace(/\.[^/.]+$/, '')}_${todayKey()}.txt`);
 }
 
-function exportPdf() {
+async function exportPdf() {
   const d = getDoc(state.activeDocA);
   if (!d) return;
 
   const w = window.open('', '_blank');
   if (!w) {
-    alert('내보내기 창을 열 수 없습니다. 브라우저 팝업 차단을 해제한 뒤 다시 시도하세요.');
+    await openNoticeDialog({
+      title: 'PDF 내보내기 실패',
+      message: '내보내기 창을 열 수 없습니다. 브라우저 팝업 차단을 해제한 뒤 다시 시도하세요.',
+    });
     return;
   }
 
@@ -2299,8 +2554,14 @@ function renderHistory() {
 
     const restoreBtn = document.createElement('button');
     restoreBtn.textContent = '안전복원';
-    restoreBtn.onclick = () => {
-      if (!confirm('현재 상태를 백업한 뒤 이 버전으로 복원할까요?')) return;
+    restoreBtn.onclick = async () => {
+      const shouldRestore = await openConfirmDialog({
+        title: '히스토리 복원 확인',
+        message: '현재 상태를 백업한 뒤 이 버전으로 복원할까요?',
+        confirmText: '복원',
+        cancelText: '취소',
+      });
+      if (!shouldRestore) return;
       const backupSnapshot = cloneStateForHistory();
       const backupMeta = {
         scope: 'full',
@@ -2362,7 +2623,10 @@ function tickTimer() {
       state.sessionsByDate[date] = (state.sessionsByDate[date] || 0) + tick.sessionDelta;
     }
     if (tick.completedMode) {
-      alert(`${tick.completedMode === 'focus' ? '집중' : '휴식'} 완료! 다음: ${state.pomodoro.mode}`);
+      void openNoticeDialog({
+        title: '뽀모도로',
+        message: `${tick.completedMode === 'focus' ? '집중' : '휴식'} 완료! 다음: ${state.pomodoro.mode}`,
+      });
     }
   } else {
     if (state.pomodoro.mode === 'focus') {
@@ -2379,7 +2643,10 @@ function tickTimer() {
       state.pomodoro.mode = state.pomodoro.mode === 'focus' ? 'break' : 'focus';
       const mins = getPomodoroMinutes();
       state.pomodoro.left = state.pomodoro.mode === 'focus' ? mins.focus * 60 : mins.break * 60;
-      alert(`${completedMode === 'focus' ? '집중' : '휴식'} 완료! 다음: ${state.pomodoro.mode}`);
+      void openNoticeDialog({
+        title: '뽀모도로',
+        message: `${completedMode === 'focus' ? '집중' : '휴식'} 완료! 다음: ${state.pomodoro.mode}`,
+      });
     }
   }
 
@@ -2484,7 +2751,7 @@ async function authSignUp() {
       return;
     }
     if (result.code === 'signup_error') {
-      setAuthStatus(result.error && result.error.message ? result.error.message : '회원가입에 실패했습니다.');
+      setAuthStatus(resolveAuthResultMessage('signup', result));
       return;
     }
     setAuthStatus('회원가입 기능을 사용할 수 없습니다. 설정을 확인하세요.');
@@ -2519,7 +2786,7 @@ async function authLogin() {
       return;
     }
     if (result.code === 'login_error') {
-      setAuthStatus(result.error && result.error.message ? result.error.message : '로그인에 실패했습니다.');
+      setAuthStatus(resolveAuthResultMessage('login', result));
       return;
     }
     setAuthStatus('로그인 기능을 사용할 수 없습니다. 설정을 확인하세요.');
@@ -2653,7 +2920,13 @@ async function authLogout() {
   }
   const synced = await pushRemoteState({ reason: 'logout', allowRetry: false });
   if (!synced) {
-    const proceed = confirm('마지막 동기화에 실패했습니다. 지금 로그아웃하면 최근 변경이 다른 기기에 반영되지 않을 수 있습니다. 그래도 로그아웃할까요?');
+    const proceed = await openConfirmDialog({
+      title: '로그아웃 확인',
+      message: '마지막 동기화에 실패했습니다. 지금 로그아웃하면 최근 변경이 다른 기기에 반영되지 않을 수 있습니다. 그래도 로그아웃할까요?',
+      confirmText: '로그아웃',
+      cancelText: '취소',
+      danger: true,
+    });
     if (!proceed) {
       setAuthStatus('로그아웃을 취소했습니다. 동기화 후 다시 시도하세요.');
       return;
@@ -2779,7 +3052,10 @@ async function executeAccountDeletionFlow(user, options = {}) {
           logContext: 'withdraw delete account rpc failed',
         });
         if ((error.message || '').includes('delete_my_account')) {
-          alert('회원 탈퇴 실패: 서버 설정이 완료되지 않았습니다. 관리자에게 문의하세요.');
+          void openNoticeDialog({
+            title: '회원 탈퇴 실패',
+            message: '서버 설정이 완료되지 않았습니다. 관리자에게 문의하세요.',
+          });
         }
       },
       onSuccess: async () => {
@@ -2799,7 +3075,10 @@ async function executeAccountDeletionFlow(user, options = {}) {
         setAuthStatus(options.successMessage || '회원 탈퇴 완료: 계정 및 클라우드 데이터가 영구 삭제되었습니다.');
         setSyncStatus('회원 탈퇴 완료', 'ok');
         if (options.showAlert) {
-          alert('회원 탈퇴가 완료되었습니다. 계정과 데이터는 영구 삭제되었으며 복구할 수 없습니다.');
+          await openNoticeDialog({
+            title: '회원 탈퇴 완료',
+            message: '회원 탈퇴가 완료되었습니다. 계정과 데이터는 영구 삭제되었으며 복구할 수 없습니다.',
+          });
         }
       },
     });
@@ -2844,7 +3123,10 @@ async function executeAccountDeletionFlow(user, options = {}) {
       logContext: 'withdraw delete account rpc failed',
     });
     if ((deletedAccount.error.message || '').includes('delete_my_account')) {
-      alert('회원 탈퇴 실패: 서버 설정이 완료되지 않았습니다. 관리자에게 문의하세요.');
+      await openNoticeDialog({
+        title: '회원 탈퇴 실패',
+        message: '서버 설정이 완료되지 않았습니다. 관리자에게 문의하세요.',
+      });
     }
     return false;
   }
@@ -2865,7 +3147,10 @@ async function executeAccountDeletionFlow(user, options = {}) {
   setAuthStatus(options.successMessage || '회원 탈퇴 완료: 계정 및 클라우드 데이터가 영구 삭제되었습니다.');
   setSyncStatus('회원 탈퇴 완료', 'ok');
   if (options.showAlert) {
-    alert('회원 탈퇴가 완료되었습니다. 계정과 데이터는 영구 삭제되었으며 복구할 수 없습니다.');
+    await openNoticeDialog({
+      title: '회원 탈퇴 완료',
+      message: '회원 탈퇴가 완료되었습니다. 계정과 데이터는 영구 삭제되었으며 복구할 수 없습니다.',
+    });
   }
   return true;
 }
@@ -2906,7 +3191,7 @@ async function authWithdraw() {
       return;
     }
     if (verify.code === 'reauth_failed') {
-      showUiError('withdraw', verify.error, { auth: true, sync: false, logContext: 'withdraw re-auth failed' });
+      setAuthStatus(resolveAuthResultMessage('withdraw-reauth', verify));
       setSyncStatus('탈퇴 중단: 계정 확인 실패', 'error');
       return;
     }
@@ -3246,4 +3531,3 @@ if (document.readyState === 'loading') {
 } else {
   safeInit();
 }
-

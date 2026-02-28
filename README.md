@@ -44,7 +44,7 @@ node .\scripts\security-preflight-check.js
 
 ## 현재 우선순위
 
-1. 아이디 인증 UX 보강(정책 안내/에러 메시지)
-2. 암호화 잠금 해제/재암호화 UX 고도화
-3. 동기화 충돌 UX 개선(confirm -> 명시적 선택 UI)
+1. `app.js` 2차 분해(문서트리/히스토리/타이머/인증 조립 경계 분리)
+2. 통합 흐름 테스트 보강(인증-암호화-동기화-로그아웃)
+3. 암호화 잠금 해제/재암호화 UX 고도화
 4. 모바일 실단말 회귀(iOS Safari, Android Chrome)

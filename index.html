@@ -173,6 +173,43 @@
     </div>
   </dialog>
 
+  <dialog id="confirm-dialog" class="security-dialog">
+    <h3 id="confirm-dialog-title">확인</h3>
+    <p id="confirm-dialog-message"></p>
+    <div class="danger-actions">
+      <button id="confirm-dialog-cancel-btn" type="button">취소</button>
+      <button id="confirm-dialog-confirm-btn" type="button">확인</button>
+    </div>
+  </dialog>
+
+  <dialog id="input-dialog" class="security-dialog">
+    <h3 id="input-dialog-title">입력</h3>
+    <p id="input-dialog-message"></p>
+    <input id="input-dialog-value" type="text" autocomplete="off" />
+    <div class="danger-actions">
+      <button id="input-dialog-cancel-btn" type="button">취소</button>
+      <button id="input-dialog-confirm-btn" type="button">확인</button>
+    </div>
+  </dialog>
+
+  <dialog id="notice-dialog" class="security-dialog">
+    <h3 id="notice-dialog-title">안내</h3>
+    <p id="notice-dialog-message"></p>
+    <div class="danger-actions">
+      <button id="notice-dialog-close-btn" type="button">확인</button>
+    </div>
+  </dialog>
+
+  <dialog id="choice-dialog" class="security-dialog">
+    <h3 id="choice-dialog-title">선택</h3>
+    <p id="choice-dialog-message"></p>
+    <div class="danger-actions">
+      <button id="choice-dialog-cancel-btn" type="button">취소</button>
+      <button id="choice-dialog-secondary-btn" type="button">다른 선택</button>
+      <button id="choice-dialog-primary-btn" type="button">확인</button>
+    </div>
+  </dialog>
+
   <dialog id="encryption-unlock-dialog" class="security-dialog">
     <h3>데이터 암호 해제</h3>
     <p id="encryption-unlock-copy">데이터 암호 해제를 위해 로그인 비밀번호를 입력하세요.</p>
@@ -193,7 +230,6 @@
   <script src="app.js?v=92"></script>
 </body>
 </html>
-
 
 
 

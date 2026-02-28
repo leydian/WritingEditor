@@ -1,7 +1,7 @@
 ﻿# WritingEditor 통합 프로젝트 문서 (단일 기준본)
 
 작성일: 2026-02-16  
-최종 갱신: 2026-02-16 (최신 커밋 `a88c73e` 반영)  
+최종 갱신: 2026-03-01 (대화상자 UX/인증 메시지 표준화 작업 반영)  
 기준 경로: `C:\dlatl\WritingEditor`  
 기준 브랜치: `main`  
 원격 저장소: `https://github.com/leydian/WritingEditor`  
@@ -43,6 +43,22 @@
 - 동기화 계산/충돌 판정을 `sync-utils.js`로 분리
 - 서비스 미로딩/SDK 후행 로드 상황에 대한 fallback 및 회귀 테스트 보강
 
+7. 대화상자/피드백 UX 표준화 (2026-03-01)
+- 브라우저 기본 대화상자(`confirm/prompt/alert`) 사용 제거
+- 공통 모달 API 추가: 확인/입력/알림/선택형(`confirm-dialog`, `input-dialog`, `notice-dialog`, `choice-dialog`)
+- 문서/폴더 생성·이름변경·삭제, 히스토리 복원, 로그아웃 확인, 탈퇴 완료/실패 안내를 공통 모달로 통일
+
+8. 동기화 충돌 UX 개선 (2026-03-01)
+- 충돌 분기를 단순 `confirm`에서 명시적 3지선다로 전환
+  - `로컬로 덮어쓰기`
+  - `원격 상태 불러오기`
+  - `동기화 취소`
+
+9. 인증 오류 메시지 표준화 (2026-03-01)
+- `auth-service.js`에서 인증 오류 reason 코드 분류(`INVALID_CREDENTIALS`, `IDENTIFIER_TAKEN`, `WEAK_PASSWORD`, `NETWORK`, `RATE_LIMIT` 등)
+- `app.js`에서 reason 코드 기반 사용자 메시지 매핑
+- 탈퇴 재인증 실패 메시지를 일반 오류 출력에서 목적형 메시지로 통일
+
 ---
 
 ## 1. 문서 목적 / 운영 원칙
@@ -80,6 +96,7 @@
 - Supabase 호환을 위해 내부적으로 `아이디 -> synthetic email` 매핑 사용
 - synthetic domain: `id.writingeditor.local`
 - 기존 이메일 입력도 호환 경로로 유지(입력값에 `@` 포함 시 이메일로 처리)
+- 인증/재인증 실패는 reason 코드 기반 메시지 매핑 적용
 
 ### 2.2 데이터 암호화
 
@@ -102,7 +119,7 @@
 - 자동 동기화 실패 시 지수 백오프 재시도(최대 3회)
 - 일반 로그아웃 직전 강제 동기화 시도, 실패 시 강행 여부 확인
 - push 전 세션 신선도 확인(`ensureFreshAuthSession`)
-- 원격 `updated_at` 기반 충돌 감지 후 덮어쓰기 확인
+- 원격 `updated_at` 기반 충돌 감지 후 명시적 3지선다 UI로 처리
 
 ### 2.4 에디터 / 히스토리
 
@@ -136,6 +153,7 @@
 - 회색+그린 톤으로 전체 테마 통일
 - 툴바/중앙 에디터 잔여 블루 톤 제거
 - 익명 로그인 사용자 표시: `익명로그인`
+- 브라우저 기본 대화상자 제거, 공통 모달 기반 상호작용으로 일원화
 
 ### 2.9 코드 구조(리팩터링 반영)
 
@@ -198,6 +216,13 @@ node .\tests\ui-bindings.test.js
 node .\scripts\security-preflight-check.js
 ```
 
+2026-03-01 보강:
+
+- `tests/auth-service.test.js`에 reason 코드 분류 회귀 케이스 추가
+  - 중복 계정(`IDENTIFIER_TAKEN`)
+  - 잘못된 자격증명(`INVALID_CREDENTIALS`)
+  - re-auth 실패 reason 전달
+
 ---
 
 ## 5. Supabase 운영 기준
@@ -227,16 +252,16 @@ alter table public.editor_states enable row level security;
 
 ## 6. 최근 작업 타임라인 (최신순)
 
-1. `a88c73e` 모듈 fallback 강화 + 회귀 테스트 추가(P0/P1/P2 반영)
-2. `05f0bc5` 인증/설정/동기화/UI 바인딩 모듈 분리 리팩터링
-3. `ec77ab5` 다중 파트 작업로그 문서 체계 추가
-4. `de5aa22` 아이디 우선 인증 플로우 도입(Supabase 호환 매핑)
-5. `8a33daf` Supabase 설정 하드닝 이후 익명 로그인 회귀 수정
-6. `be65f9f` 암호화 흐름/동기화 재시도/운영 문서 보강
-7. `474bb77` 일반 계정 로그인 비밀번호 기반 데이터 암호화 도입
-8. `44a05ad` 툴바 잔여 블루 제거 + 익명 사용자 라벨 개선
-9. `3ecf981` 톤다운 회색+그린 테마 2안 적용
-10. `be6b69a` 회색+그린 테마 적용
+1. `2026-03-01` 대화상자 표준화 + 충돌 선택 UI + 인증 reason 코드 기반 메시지 적용
+2. `a88c73e` 모듈 fallback 강화 + 회귀 테스트 추가(P0/P1/P2 반영)
+3. `05f0bc5` 인증/설정/동기화/UI 바인딩 모듈 분리 리팩터링
+4. `ec77ab5` 다중 파트 작업로그 문서 체계 추가
+5. `de5aa22` 아이디 우선 인증 플로우 도입(Supabase 호환 매핑)
+6. `8a33daf` Supabase 설정 하드닝 이후 익명 로그인 회귀 수정
+7. `be65f9f` 암호화 흐름/동기화 재시도/운영 문서 보강
+8. `474bb77` 일반 계정 로그인 비밀번호 기반 데이터 암호화 도입
+9. `44a05ad` 툴바 잔여 블루 제거 + 익명 사용자 라벨 개선
+10. `3ecf981` 톤다운 회색+그린 테마 2안 적용
 
 ---
 
@@ -261,16 +286,17 @@ node .\scripts\security-preflight-check.js
 
 ### 7.2 우선순위 백로그
 
-1. 아이디 인증 UX 보강
-- 아이디 정책 안내/중복/예약어 정책 명확화
-- 계정 전환/탈퇴 문구 일관성 강화
+1. `app.js` 2차 분해
+- 문서 트리/히스토리/타이머/인증 조립 경계 분리
+- 대화상자 공통 API를 별도 모듈로 이동
 
-2. 암호화 UX 고도화
+2. 통합 흐름 테스트 보강
+- 인증-암호화-동기화-로그아웃 시나리오를 계약 테스트로 확장
+- 충돌 선택 UI 동작 분기 테스트 추가
+
+3. 암호화 UX 고도화
 - 비밀번호 변경 직후 재암호화/복구 플로우 구체화
 - 잠금 상태 오류 메시지 세분화
-
-3. 동기화 충돌 UX 개선
-- confirm 기반 분기 -> 명시적 선택 모달
 
 4. 모바일 실단말 회귀
 - iPhone Safari, Android Chrome 시나리오 주기 점검
@@ -280,6 +306,7 @@ node .\scripts\security-preflight-check.js
 - 일반 계정은 복호화에 로그인 비밀번호가 필요(분실 시 접근 불가)
 - `localStorage` 중심 구조 특성상 XSS 발생 시 민감도 상승
 - 아이디 매핑 도메인(`id.writingeditor.local`) 운영 정책 문서화 추가 필요
+- `app.js` 단일 파일 비중이 여전히 커서(3k+ LOC) 변경 충돌/회귀 전파 가능성 높음
 - 모듈 스크립트(`auth-service.js`, `auth-config-service.js`, `ui-bindings.js`) 로드 실패 시 fallback 경로는 있으나, 핵심 UX 저하 가능
 
 ---
@@ -290,8 +317,9 @@ node .\scripts\security-preflight-check.js
 - 암호화 운영: `docs/ENCRYPTION_RUNBOOK.md`
 - 동기화 회귀: `docs/SYNC_REGRESSION_CHECKLIST.md`
 - 진행 요약: `docs/PROGRESS_SUMMARY_2026-02-16.md`
+- 진행 요약(최신): `docs/PROGRESS_SUMMARY_2026-03-01.md`
 - 프로젝트 개요: `README.md`
 
 ---
 
-이 문서는 2026-02-16 기준 **현재 코드 상태와 운영 기준**을 반영한 최신 공식 기준본이다.
+이 문서는 2026-03-01 기준 **현재 코드 상태와 운영 기준**을 반영한 최신 공식 기준본이다.

@@ -34,10 +34,10 @@
 3. `docs/worklog/PART_02_EDITOR_PRODUCTIVITY.md`
 4. `docs/worklog/PART_03_LAYOUT_AND_NAVIGATION.md`
 5. `docs/worklog/PART_04_CALENDAR_AND_STATS.md`
+6. `docs/PROGRESS_SUMMARY_2026-03-01.md` (최신 진행 요약)
 
 ## 3) 운영 규칙
 
 - 신규 기능/회귀 수정이 발생하면 해당 파트 문서에 먼저 누적한다.
 - 파트 간 중복 이슈는 “주관 파트 1개”에 상세 기록하고, 나머지는 링크로 참조한다.
 - 다음 세션 시작 시 본 인덱스에서 주제 문서를 열고 작업 맥락을 복원한다.
-

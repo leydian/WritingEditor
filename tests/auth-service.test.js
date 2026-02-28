@@ -179,6 +179,24 @@ async function testResolveWithdrawTargetUser() {
   assert.strictEqual(invalidId.ok, false);
   assert.strictEqual(invalidId.code, 'invalid_identifier');
 
+  const reauthFailed = await authService.resolveWithdrawTargetUser({
+    supabase: {
+      auth: {
+        async signInWithPassword() {
+          return { error: { message: 'Invalid login credentials' } };
+        },
+      },
+    },
+    supabaseUser: { id: 'u1' },
+    requiresCredentialReauth: true,
+    inputEmail: 'tester',
+    inputPassword: 'wrong',
+    resolveIdentifier,
+  });
+  assert.strictEqual(reauthFailed.ok, false);
+  assert.strictEqual(reauthFailed.code, 'reauth_failed');
+  assert.strictEqual(reauthFailed.reason, 'INVALID_CREDENTIALS');
+
   let signedOut = false;
   const mismatchSupabase = {
     auth: {
@@ -275,6 +293,22 @@ async function testSignUpAndLoginWithIdentifier() {
   });
   assert.strictEqual(failSignup.ok, false);
   assert.strictEqual(failSignup.code, 'signup_error');
+  assert.strictEqual(failSignup.reason, 'UNKNOWN');
+
+  const duplicateSignup = await authService.signUpWithIdentifier({
+    supabase: {
+      auth: {
+        async signUp() {
+          return { error: { message: 'User already registered' } };
+        },
+      },
+    },
+    idRaw: 'tester',
+    password: 'pw',
+    resolveIdentifier,
+  });
+  assert.strictEqual(duplicateSignup.ok, false);
+  assert.strictEqual(duplicateSignup.reason, 'IDENTIFIER_TAKEN');
 
   const badLogin = await authService.loginWithIdentifier({
     supabase,
@@ -301,6 +335,22 @@ async function testSignUpAndLoginWithIdentifier() {
   });
   assert.strictEqual(failLogin.ok, false);
   assert.strictEqual(failLogin.code, 'login_error');
+  assert.strictEqual(failLogin.reason, 'UNKNOWN');
+
+  const badCredentialLogin = await authService.loginWithIdentifier({
+    supabase: {
+      auth: {
+        async signInWithPassword() {
+          return { error: { message: 'Invalid login credentials' } };
+        },
+      },
+    },
+    idRaw: 'tester',
+    password: 'pw',
+    resolveIdentifier,
+  });
+  assert.strictEqual(badCredentialLogin.ok, false);
+  assert.strictEqual(badCredentialLogin.reason, 'INVALID_CREDENTIALS');
 }
 
 async function testUpgradeAnonymousAccount() {
@@ -354,6 +404,7 @@ async function testUpgradeAnonymousAccount() {
   });
   assert.strictEqual(updateFail.ok, false);
   assert.strictEqual(updateFail.code, 'update_error');
+  assert.strictEqual(updateFail.reason, 'UNKNOWN');
 
   const autoSigninLimited = await authService.upgradeAnonymousAccount({
     supabase: {
@@ -388,6 +439,7 @@ async function testAnonymousLogin() {
   });
   assert.strictEqual(failed.ok, false);
   assert.strictEqual(failed.code, 'login_error');
+  assert.strictEqual(failed.reason, 'UNKNOWN');
 
   const ok = await authService.anonymousLogin({
     auth: {
