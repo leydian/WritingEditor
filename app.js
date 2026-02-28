@@ -32,6 +32,7 @@ const syncUtils = (typeof SyncUtils !== 'undefined' && SyncUtils) ? SyncUtils : 
 const authService = (typeof AuthService !== 'undefined' && AuthService) ? AuthService : null;
 const authConfigService = (typeof AuthConfigService !== 'undefined' && AuthConfigService) ? AuthConfigService : null;
 const uiBindings = (typeof UiBindings !== 'undefined' && UiBindings) ? UiBindings : null;
+const dialogService = (typeof DialogService !== 'undefined' && DialogService) ? DialogService : null;
 
 function seoulDateParts(date = new Date()) {
   const parts = new Intl.DateTimeFormat('en-CA', {
@@ -108,13 +109,15 @@ let pendingAuthPassword = '';
 let pendingEncryptedLocalState = null;
 let localEncryptedWriteSeq = 0;
 let encryptionUnlockResolver = null;
-let confirmDialogResolver = null;
-let inputDialogResolver = null;
-let noticeDialogResolver = null;
-let choiceDialogResolver = null;
 let commandPaletteSelection = 0;
 const dirtyDocIds = new Set();
 const layoutPrefs = loadLayoutPrefs();
+const dialogApi = (
+  dialogService
+  && typeof dialogService.createDialogApi === 'function'
+)
+  ? dialogService.createDialogApi({ getById: $ })
+  : null;
 
 const state = loadState();
 
@@ -431,172 +434,31 @@ function resolveDisplayIdentity(user) {
   return email || '일반로그인';
 }
 
-function closeDialogSafe(dialog) {
-  if (!dialog || typeof dialog.close !== 'function') return;
-  if (dialog.open) dialog.close();
-}
-
-function settleDialogResolver(kind, value) {
-  if (kind === 'confirm' && confirmDialogResolver) {
-    const resolve = confirmDialogResolver;
-    confirmDialogResolver = null;
-    resolve(!!value);
-    return;
-  }
-  if (kind === 'input' && inputDialogResolver) {
-    const resolve = inputDialogResolver;
-    inputDialogResolver = null;
-    resolve(value);
-    return;
-  }
-  if (kind === 'notice' && noticeDialogResolver) {
-    const resolve = noticeDialogResolver;
-    noticeDialogResolver = null;
-    resolve();
-    return;
-  }
-  if (kind === 'choice' && choiceDialogResolver) {
-    const resolve = choiceDialogResolver;
-    choiceDialogResolver = null;
-    resolve(value || 'cancel');
-  }
-}
-
 async function openConfirmDialog(options = {}) {
-  const dialog = $('confirm-dialog');
-  const title = $('confirm-dialog-title');
-  const message = $('confirm-dialog-message');
-  const cancelBtn = $('confirm-dialog-cancel-btn');
-  const confirmBtn = $('confirm-dialog-confirm-btn');
-  if (!dialog || !cancelBtn || !confirmBtn || typeof dialog.showModal !== 'function') {
-    return false;
+  if (dialogApi && typeof dialogApi.confirm === 'function') {
+    return dialogApi.confirm(options);
   }
-  if (title) title.textContent = options.title || '확인';
-  if (message) message.textContent = options.message || '';
-  cancelBtn.textContent = options.cancelText || '취소';
-  confirmBtn.textContent = options.confirmText || '확인';
-  confirmBtn.classList.toggle('danger-btn', !!options.danger);
-  cancelBtn.onclick = () => {
-    settleDialogResolver('confirm', false);
-    closeDialogSafe(dialog);
-  };
-  confirmBtn.onclick = () => {
-    settleDialogResolver('confirm', true);
-    closeDialogSafe(dialog);
-  };
-  dialog.oncancel = () => {
-    settleDialogResolver('confirm', false);
-  };
-  if (dialog.open) dialog.close();
-  dialog.showModal();
-  return new Promise((resolve) => {
-    confirmDialogResolver = resolve;
-  });
+  return false;
 }
 
 async function openInputDialog(options = {}) {
-  const dialog = $('input-dialog');
-  const title = $('input-dialog-title');
-  const message = $('input-dialog-message');
-  const input = $('input-dialog-value');
-  const cancelBtn = $('input-dialog-cancel-btn');
-  const confirmBtn = $('input-dialog-confirm-btn');
-  if (!dialog || !input || !cancelBtn || !confirmBtn || typeof dialog.showModal !== 'function') {
-    return null;
+  if (dialogApi && typeof dialogApi.input === 'function') {
+    return dialogApi.input(options);
   }
-  if (title) title.textContent = options.title || '입력';
-  if (message) message.textContent = options.message || '';
-  input.value = options.defaultValue || '';
-  input.placeholder = options.placeholder || '';
-  cancelBtn.textContent = options.cancelText || '취소';
-  confirmBtn.textContent = options.confirmText || '확인';
-  cancelBtn.onclick = () => {
-    settleDialogResolver('input', null);
-    closeDialogSafe(dialog);
-  };
-  confirmBtn.onclick = () => {
-    settleDialogResolver('input', input.value);
-    closeDialogSafe(dialog);
-  };
-  dialog.oncancel = () => {
-    settleDialogResolver('input', null);
-  };
-  if (dialog.open) dialog.close();
-  dialog.showModal();
-  setTimeout(() => {
-    input.focus();
-    input.select();
-  }, 0);
-  return new Promise((resolve) => {
-    inputDialogResolver = resolve;
-  });
+  return null;
 }
 
 async function openNoticeDialog(options = {}) {
-  const dialog = $('notice-dialog');
-  const title = $('notice-dialog-title');
-  const message = $('notice-dialog-message');
-  const closeBtn = $('notice-dialog-close-btn');
-  if (!dialog || !closeBtn || typeof dialog.showModal !== 'function') return;
-  if (title) title.textContent = options.title || '안내';
-  if (message) message.textContent = options.message || '';
-  closeBtn.textContent = options.closeText || '확인';
-  closeBtn.onclick = () => {
-    settleDialogResolver('notice');
-    closeDialogSafe(dialog);
-  };
-  dialog.oncancel = () => {
-    settleDialogResolver('notice');
-  };
-  if (dialog.open) dialog.close();
-  dialog.showModal();
-  return new Promise((resolve) => {
-    noticeDialogResolver = resolve;
-  });
+  if (dialogApi && typeof dialogApi.notice === 'function') {
+    return dialogApi.notice(options);
+  }
 }
 
 async function openChoiceDialog(options = {}) {
-  const dialog = $('choice-dialog');
-  const title = $('choice-dialog-title');
-  const message = $('choice-dialog-message');
-  const primaryBtn = $('choice-dialog-primary-btn');
-  const secondaryBtn = $('choice-dialog-secondary-btn');
-  const cancelBtn = $('choice-dialog-cancel-btn');
-  if (
-    !dialog
-    || !primaryBtn
-    || !secondaryBtn
-    || !cancelBtn
-    || typeof dialog.showModal !== 'function'
-  ) {
-    return 'cancel';
+  if (dialogApi && typeof dialogApi.choice === 'function') {
+    return dialogApi.choice(options);
   }
-  const choices = options.choices || {};
-  if (title) title.textContent = options.title || '선택';
-  if (message) message.textContent = options.message || '';
-  primaryBtn.textContent = (choices.primary && choices.primary.label) || '확인';
-  secondaryBtn.textContent = (choices.secondary && choices.secondary.label) || '다른 선택';
-  cancelBtn.textContent = (choices.cancel && choices.cancel.label) || '취소';
-  primaryBtn.onclick = () => {
-    settleDialogResolver('choice', (choices.primary && choices.primary.value) || 'primary');
-    closeDialogSafe(dialog);
-  };
-  secondaryBtn.onclick = () => {
-    settleDialogResolver('choice', (choices.secondary && choices.secondary.value) || 'secondary');
-    closeDialogSafe(dialog);
-  };
-  cancelBtn.onclick = () => {
-    settleDialogResolver('choice', (choices.cancel && choices.cancel.value) || 'cancel');
-    closeDialogSafe(dialog);
-  };
-  dialog.oncancel = () => {
-    settleDialogResolver('choice', (choices.cancel && choices.cancel.value) || 'cancel');
-  };
-  if (dialog.open) dialog.close();
-  dialog.showModal();
-  return new Promise((resolve) => {
-    choiceDialogResolver = resolve;
-  });
+  return 'cancel';
 }
 
 function resolveAuthResultMessage(flow, result) {

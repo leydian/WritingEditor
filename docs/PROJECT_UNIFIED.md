@@ -48,6 +48,11 @@
 - 공통 모달 API 추가: 확인/입력/알림/선택형(`confirm-dialog`, `input-dialog`, `notice-dialog`, `choice-dialog`)
 - 문서/폴더 생성·이름변경·삭제, 히스토리 복원, 로그아웃 확인, 탈퇴 완료/실패 안내를 공통 모달로 통일
 
+10. 조립층 분해 1차 (2026-03-01)
+- 대화상자 로직을 `dialog-service.js`로 분리
+- `app.js`는 `DialogService.createDialogApi` 호출로 조립 역할만 수행
+- `tests/dialog-service.test.js`로 대화상자 계약 테스트 추가
+
 8. 동기화 충돌 UX 개선 (2026-03-01)
 - 충돌 분기를 단순 `confirm`에서 명시적 3지선다로 전환
   - `로컬로 덮어쓰기`
@@ -162,6 +167,7 @@
 - 설정/초기화: `auth-config-service.js`
 - 동기화 계산: `sync-utils.js`
 - UI 이벤트 바인딩: `ui-bindings.js`
+- 대화상자 서비스: `dialog-service.js`
 - 상태 정규화/히스토리/뽀모도로 계산: `state-utils.js`
 
 ---
@@ -202,6 +208,7 @@ node .\scripts\security-preflight-check.js
 - `tests/auth-config-service.test.js`
 - `tests/sync-utils.test.js`
 - `tests/ui-bindings.test.js`
+- `tests/dialog-service.test.js`
 
 검증 명령:
 
@@ -213,6 +220,7 @@ node .\tests\auth-service.test.js
 node .\tests\auth-config-service.test.js
 node .\tests\sync-utils.test.js
 node .\tests\ui-bindings.test.js
+node .\tests\dialog-service.test.js
 node .\scripts\security-preflight-check.js
 ```
 
