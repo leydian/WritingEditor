@@ -1,12 +1,17 @@
-/* ── Tablet: sidebar/stats already fixed overlay, no grid changes needed ── */
 @media (max-width: 1100px) {
-  /* No layout overrides needed — panels are fixed overlays */
+  .toolbar-doc-title {
+    max-width: 180px;
+  }
+
+  .right-tools {
+    gap: 2px;
+  }
 }
 
 @media (max-width: 900px) {
   .app {
     min-height: 100vh;
-    padding: 0 0 calc(72px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(86px + env(safe-area-inset-bottom, 0px));
   }
 
   .main {
@@ -22,88 +27,107 @@
     display: none !important;
   }
 
-  .editor-area.vertical {
-    grid-template-columns: 1fr;
+  .editor-area {
+    padding: 10px;
   }
 
+  .editor-area.vertical,
   .editor-area.horizontal {
+    grid-template-columns: 1fr;
     grid-template-rows: 1fr;
   }
 
   .pane {
-    min-height: 46vh;
+    min-height: 52vh;
+    border-radius: 14px;
+  }
+
+  .pane-head {
+    padding: 8px 12px;
   }
 
   textarea {
     font-size: 16px;
-    line-height: 1.78;
-    padding: 14px;
+    line-height: 1.82;
+    padding: 16px 14px 20px;
   }
 
+  .sidebar,
+  .stats-panel {
+    width: min(88vw, 360px);
+  }
+
+  .sidebar {
+    border-right: 1px solid #c9bfa8;
+  }
+
+  .stats-panel {
+    border-left: 1px solid #c9bfa8;
+  }
+
+  .sidebar-close-btn,
+  .panel-close-btn,
   .panel-icon-btn {
     width: 44px;
     height: 44px;
     font-size: 16px;
   }
 
-  /* Mobile-mini sidebar drawer: narrower width, stronger shadow */
-  .mobile-mini .sidebar {
-    width: min(86vw, 340px);
-    box-shadow: 18px 0 42px rgba(2, 8, 23, .3);
-  }
-
-  /* Mobile-mini stats panel drawer */
-  .mobile-mini.mobile-mini-calendar-open .stats-panel {
-    width: min(88vw, 360px);
-    box-shadow: -18px 0 42px rgba(2, 8, 23, .24);
-  }
-
-  /* ── Mobile Action Bar ── */
   .mobile-action-bar {
     position: fixed;
     left: 10px;
     right: 10px;
     bottom: calc(10px + env(safe-area-inset-bottom, 0px));
-    z-index: 75;
+    z-index: var(--fx-layer-mobile-bar);
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 8px;
     padding: 8px;
-    border-radius: 16px;
-    border: 1px solid var(--fx-border);
-    background: rgba(255, 255, 255, .95);
-    box-shadow: 0 12px 28px rgba(29, 32, 27, .14);
-    backdrop-filter: blur(10px);
+    border-radius: 18px;
+    border: 1px solid #b7a98d;
+    background:
+      radial-gradient(120% 180% at 0% 0%, rgba(255, 255, 255, 0.42), transparent 52%),
+      linear-gradient(180deg, rgba(36, 92, 72, 0.94) 0%, rgba(25, 67, 52, 0.96) 100%);
+    box-shadow: 0 18px 34px rgba(18, 33, 26, 0.33);
+    backdrop-filter: blur(12px);
   }
 
   .mobile-action-bar button {
     min-height: 46px;
     border-radius: 12px;
-    padding: 8px 6px;
+    border: 1px solid transparent;
+    padding: 8px 4px;
     font-size: 12px;
     font-weight: 700;
+    color: #e7f3ee;
     background: transparent;
-    border-color: transparent;
+  }
+
+  .mobile-action-bar button:hover {
+    transform: none;
+    box-shadow: none;
+    background: rgba(255, 255, 255, 0.14);
+    border-color: rgba(255, 255, 255, 0.22);
+    color: #fff;
   }
 
   .mobile-action-bar button.active {
-    background: linear-gradient(180deg, var(--fx-accent) 0%, var(--fx-accent-strong) 100%);
-    border-color: #1f4f3e;
-    color: #edf6f2;
+    background: linear-gradient(180deg, #f6fdf9 0%, #dff1e9 100%);
+    color: #194130;
+    border-color: #a9d0c0;
   }
 
   .mobile-more-dialog {
     width: min(96vw, 420px);
-    border-radius: var(--fx-radius-lg);
-    border: 1px solid var(--fx-border);
-    box-shadow: var(--fx-shadow);
-    padding: 14px;
-    background: #fff;
-    color: var(--fx-ink);
+    margin-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+    border: 1px solid #c2b496;
+    border-radius: 18px;
+    background: linear-gradient(180deg, #fffdf7 0%, #f6efdf 100%);
+    box-shadow: 0 20px 42px rgba(21, 29, 22, 0.24);
   }
 
   .mobile-more-dialog h3 {
-    margin: 0 0 10px;
+    margin: 0 0 12px;
     font-size: 16px;
   }
 
@@ -111,28 +135,42 @@
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
-    margin-bottom: 10px;
+    margin-bottom: 12px;
   }
 
   .mobile-more-grid button,
   #mobile-more-close-btn {
     min-height: 44px;
   }
+
+  .calendar-tools,
+  .calendar-view-toggle {
+    gap: 6px;
+  }
 }
 
 @media (max-width: 640px) {
+  .app {
+    padding-bottom: calc(82px + env(safe-area-inset-bottom, 0px));
+  }
+
   .sidebar,
   .stats-panel {
-    padding: 10px;
+    width: min(92vw, 360px);
+    padding: 12px;
   }
 
-  .pane-head {
-    font-size: 13px;
+  .stats-row {
+    padding-top: 46px;
   }
 
-  button,
-  input {
-    min-height: 44px;
+  .timer-box,
+  .daily-box {
+    padding: 12px;
+  }
+
+  #timer-display {
+    font-size: 38px;
   }
 
   .mobile-action-bar {
@@ -143,9 +181,8 @@
   }
 
   .mobile-action-bar button {
-    font-size: 11px;
     min-height: 44px;
+    font-size: 11px;
+    padding: 6px 2px;
   }
 }
-
-/* Slide animations handled by CSS transitions in layout.css */

@@ -2,7 +2,7 @@
 
 기준 저장소: `https://github.com/leydian/WritingEditor`  
 기준 브랜치: `main`  
-반영 범위: 대화상자 UX 표준화 + 동기화 충돌 UX 개선 + 인증 메시지 표준화 + 조립층 분해 1/2/3/4차 + Focus Studio UI 재구성 1차 + 모바일 UI 전면 리팩터 + UI 전면 개편 및 PDF 내보내기 개선 + **WritingEditor UI 전면 재설계(에디터 퍼스트/오버레이 패널)**
+반영 범위: 대화상자 UX 표준화 + 동기화 충돌 UX 개선 + 인증 메시지 표준화 + 조립층 분해 1/2/3/4차 + Focus Studio UI 재구성 1차 + 모바일 UI 전면 리팩터 + UI 전면 개편 및 PDF 내보내기 개선 + **WritingEditor UI 전면 재설계(에디터 퍼스트/오버레이 패널)** + **브랜딩 중심 UI 전면 재설계 2차**
 
 ## 1. 이번 작업 목표
 
@@ -263,6 +263,60 @@
 #### CSS 명시도 충돌 교훈
 
 `styles.css`는 `layout.css` → `components.css` 순서로 import한다. `components.css`에 선언된 동명 선택자의 속성은 `layout.css`를 덮어쓴다. 오버레이 패널의 `position` 등 구조적 속성은 반드시 한 파일에만 선언해야 한다.
+
+### 2.15 브랜딩 중심 UI 전면 재설계 2차
+
+- 디자인 토큰 확장 (`styles/tokens.css`)
+  - 팔레트/타이포/간격/레이어(z-index) 토큰을 재정의해 단일 시각 언어로 통합
+- 베이스 스타일 정렬 (`styles/base.css`)
+  - 배경 그라데이션, selection, focus-visible, 스크롤 톤을 브랜드 규칙으로 정리
+- 레이아웃 체계 고도화 (`styles/layout.css`)
+  - 에디터 우선 시각 계층 강화
+  - 사이드바/기록 패널/백드롭 오버레이의 깊이감 및 전환 규칙 통일
+- 컴포넌트 계층 재작성 (`styles/components.css`)
+  - 버튼 계층(기본/ghost/active) 통합
+  - 카드형 영역(timer/daily/calendar)과 dialog/command palette 쉘 스타일 통일
+- 모바일 브랜딩 강화 (`styles/mobile.css`)
+  - 하단 액션바를 브랜드 시그니처 컴포넌트로 리디자인
+  - 더보기 dialog를 바텀시트 톤으로 고도화
+- 상태 동기화 보강 (`app.js`)
+  - split 버튼 active 상태를 `updatePanelToggleButtons`에서 일괄 관리
+  - split 전환 시 active 상태 즉시 반영
+- 캐시 버전 갱신 (`index.html`)
+  - `styles.css?v=18`, `app.js?v=95`
+
+#### 2.15-a 파일별 상세 변경
+
+- `styles/tokens.css`
+  - 컬러/타이포/간격/레이어 토큰 확장
+  - 오버레이 레이어(`--fx-layer-*`)를 명시적으로 분리
+- `styles/base.css`
+  - 전역 폰트 참조를 토큰 기반(`--fx-font-ui`)으로 일원화
+  - 배경/selection/focus-visible/스크롤 룩앤필 정렬
+- `styles/layout.css`
+  - 툴바/에디터/오버레이 패널의 표면/그림자/모션 규칙 통일
+  - 패널 hidden/open 상태에서 opacity + transform 동시 전환
+- `styles/components.css`
+  - 버튼 계층과 active 상태 표준화
+  - 사이드바/기록패널/캘린더/대화상자 쉘 스타일 통합
+  - command palette/list item 상태 색상 정리
+- `styles/mobile.css`
+  - 하단 액션바를 브랜드 그라데이션 기반 컴포넌트로 재디자인
+  - 더보기 다이얼로그를 바텀시트 톤으로 조정
+- `app.js`
+  - `switchSplit()` 이후 `updatePanelToggleButtons()` 즉시 호출
+  - split 버튼 3종 active/aria-label 동기화 추가
+- `index.html`
+  - 정적 리소스 버전 업데이트(`styles.css?v=18`, `app.js?v=95`)
+
+#### 2.15-b 품질 확인 시나리오
+
+- 분할 버튼 시나리오
+  - 단일/좌우/상하 전환 시 버튼 active 상태가 즉시 반영되는지 확인
+- 패널 오버레이 시나리오
+  - 사이드바/기록패널 열림 시 백드롭/레이어 순서가 일관적인지 확인
+- 모바일 시나리오(360/390/430 폭)
+  - 하단 액션바 가독성/터치 타깃/더보기 진입 동작 확인
 
 ## 3. 테스트 결과
 

@@ -1,20 +1,18 @@
-/* ── App Shell ── */
 .app {
-  display: block;
+  position: relative;
   height: 100vh;
+  z-index: var(--fx-layer-main);
 }
 
-/* ── Main Column (editor + toolbar) ── */
 .main {
   width: 100%;
   height: 100vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: var(--fx-surface-strong);
+  background: linear-gradient(180deg, #fffcf4 0%, #f7f2e8 100%);
 }
 
-/* ── Slim Toolbar ── */
 .toolbar {
   height: var(--fx-header-h);
   min-height: var(--fx-header-h);
@@ -22,25 +20,28 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 12px;
+  padding: 0 var(--fx-space-4);
   border-bottom: 1px solid var(--fx-border);
-  background: var(--fx-surface);
-  z-index: 10;
+  background: rgba(255, 252, 245, 0.92);
+  backdrop-filter: blur(8px);
+  z-index: 12;
 }
 
 .left-tools,
 .right-tools {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--fx-space-1);
+  min-width: 0;
 }
 
-/* ── Editor Area ── */
 .editor-area {
   flex: 1;
   min-height: 0;
-  padding: 20px;
-  background: var(--fx-surface-strong);
+  padding: var(--fx-space-5);
+  background:
+    radial-gradient(540px 280px at 100% 0%, rgba(31, 90, 70, 0.04), transparent 70%),
+    linear-gradient(180deg, #faf7ef 0%, #f4eee0 100%);
   display: grid;
   grid-template-columns: 1fr;
   grid-template-rows: 1fr;
@@ -52,24 +53,25 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
-  border-radius: var(--fx-radius-md);
+  border-radius: var(--fx-radius-lg);
   border: 1px solid var(--fx-border);
-  background: #fff;
+  background: linear-gradient(180deg, #ffffff 0%, #fffdfa 100%);
+  box-shadow: var(--fx-shadow-soft);
   overflow: hidden;
-  transition: var(--fx-transition);
+  transition: border-color var(--fx-transition), box-shadow var(--fx-transition);
 }
 
 .pane.active {
-  border-color: var(--fx-accent);
-  box-shadow: 0 0 0 1px var(--fx-accent);
+  border-color: #8eb3a6;
+  box-shadow: 0 0 0 2px rgba(31, 90, 70, 0.2), var(--fx-shadow-soft);
 }
 
 .pane-head {
-  padding: 8px 16px;
-  font-size: 0.85rem;
-  font-weight: 600;
+  padding: 10px 14px;
+  font-size: var(--fx-text-sm);
+  font-weight: 700;
   color: var(--fx-ink-soft);
-  background: var(--fx-bg-soft);
+  background: linear-gradient(180deg, #f4efe2 0%, #ece4d3 100%);
   border-bottom: 1px solid var(--fx-border);
   display: flex;
   justify-content: space-between;
@@ -83,77 +85,71 @@ textarea {
   border: none;
   resize: none;
   background: transparent;
-  color: var(--fx-ink);
-  font-family: "Iowan Old Style", "Noto Serif KR", "Source Han Serif K", serif;
-  font-size: 1.15rem;
-  line-height: 1.8;
+  color: #1b1f18;
+  font-family: var(--fx-font-editor);
+  font-size: 18px;
+  line-height: 1.9;
+  letter-spacing: 0.006em;
   outline: none;
   box-sizing: border-box;
 }
 
-/* ── Sidebar Overlay ── */
-.sidebar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  width: var(--fx-overlay-w-sidebar);
-  z-index: 50;
-  transform: translateX(-100%);
-  transition: transform 0.22s ease;
-  display: flex;
-  flex-direction: column;
-  background: var(--fx-surface-strong);
-  border-right: 1px solid var(--fx-border);
-  box-shadow: 4px 0 24px rgba(26, 28, 24, 0.12);
-}
-
-/* Override legacy hidden-panel display:none for sidebar */
-.sidebar.hidden-panel {
-  display: flex !important;
-  transform: translateX(-100%);
-}
-
-.sidebar:not(.hidden-panel) {
-  transform: translateX(0);
-}
-
-/* ── Stats Panel Overlay ── */
+.sidebar,
 .stats-panel {
   position: fixed;
   top: 0;
-  right: 0;
   bottom: 0;
-  width: var(--fx-overlay-w-stats);
-  z-index: 50;
-  transform: translateX(100%);
-  transition: transform 0.22s ease;
+  z-index: var(--fx-layer-panel);
   display: flex;
   flex-direction: column;
-  background: var(--fx-surface-strong);
-  border-left: 1px solid var(--fx-border);
-  box-shadow: -4px 0 24px rgba(26, 28, 24, 0.12);
+  background: linear-gradient(180deg, #fdfbf6 0%, #f4efdf 100%);
+  transition: transform var(--fx-transition), opacity var(--fx-transition);
+  box-shadow: var(--fx-shadow-overlay);
+  opacity: 0;
 }
 
-/* Override legacy hidden-panel display:none for stats-panel */
+.sidebar {
+  left: 0;
+  width: var(--fx-overlay-w-sidebar);
+  transform: translateX(-100%);
+  border-right: 1px solid var(--fx-border);
+}
+
+.stats-panel {
+  right: 0;
+  width: var(--fx-overlay-w-stats);
+  transform: translateX(100%);
+  border-left: 1px solid var(--fx-border);
+}
+
+.sidebar.hidden-panel,
 .stats-panel.hidden-panel {
   display: flex !important;
+  opacity: 0;
+}
+
+.sidebar.hidden-panel {
+  transform: translateX(-100%);
+}
+
+.stats-panel.hidden-panel {
   transform: translateX(100%);
 }
 
+.sidebar:not(.hidden-panel),
 .stats-panel:not(.hidden-panel) {
+  opacity: 1;
   transform: translateX(0);
 }
 
-/* ── Panel Backdrop ── */
 #panel-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 49;
+  z-index: var(--fx-layer-backdrop);
   background: var(--fx-backdrop);
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.22s ease;
+  transition: opacity var(--fx-transition);
 }
 
 #panel-backdrop.active {
@@ -161,31 +157,27 @@ textarea {
   pointer-events: all;
 }
 
-/* ── Resizers: hidden (overlay layout, no resize needed) ── */
 .sidebar-resizer,
 .calendar-resizer {
   display: none;
 }
 
-/* Editor split resizer — direction depends on split mode */
 .editor-split-resizer {
   z-index: 5;
-  background: transparent;
-  transition: background 0.15s ease;
+  background: rgba(31, 90, 70, 0.04);
+  transition: background var(--fx-transition-fast);
 }
 
 .editor-split-resizer:hover {
-  background: var(--fx-accent-soft);
+  background: rgba(31, 90, 70, 0.2);
 }
 
-/* Vertical split: left-right divider */
 .editor-area.vertical .editor-split-resizer {
   cursor: col-resize;
   width: 8px;
   min-width: 8px;
 }
 
-/* Horizontal split: top-bottom divider */
 .editor-area.horizontal .editor-split-resizer {
   cursor: row-resize;
   height: 8px;

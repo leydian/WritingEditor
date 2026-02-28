@@ -2158,6 +2158,7 @@ function switchSplit(mode) {
   saveState();
   renderEditors();
   updateProgress();
+  updatePanelToggleButtons();
 }
 
 function ensureUiSubState() {
@@ -3190,6 +3191,9 @@ function updatePanelToggleButtons() {
   const calendarBtn = $('toggle-calendar-btn');
   const sidebarToolbarBtn = $('toggle-sidebar-toolbar-btn');
   const calendarToolbarBtn = $('toggle-calendar-toolbar-btn');
+  const splitSingleBtn = $('split-single-btn');
+  const splitVerticalBtn = $('split-vertical-btn');
+  const splitHorizontalBtn = $('split-horizontal-btn');
   const mobileDocBtn = $('mobile-doc-btn');
   const mobileCalendarBtn = $('mobile-calendar-btn');
   const isMobileMini = window.innerWidth <= MOBILE_MINI_BREAKPOINT;
@@ -3225,6 +3229,18 @@ function updatePanelToggleButtons() {
     mobileCalendarBtn.textContent = showCalendar ? '기록 닫기' : '기록';
     mobileCalendarBtn.setAttribute('aria-label', showCalendar ? '기록 패널 닫기' : '기록 패널 열기');
     mobileCalendarBtn.classList.toggle('active', showCalendar);
+  }
+  if (splitSingleBtn) {
+    splitSingleBtn.classList.toggle('active', state.split === 'single');
+    splitSingleBtn.setAttribute('aria-label', '단일 레이아웃');
+  }
+  if (splitVerticalBtn) {
+    splitVerticalBtn.classList.toggle('active', state.split === 'vertical');
+    splitVerticalBtn.setAttribute('aria-label', '좌우 분할 레이아웃');
+  }
+  if (splitHorizontalBtn) {
+    splitHorizontalBtn.classList.toggle('active', state.split === 'horizontal');
+    splitHorizontalBtn.setAttribute('aria-label', '상하 분할 레이아웃');
   }
 }
 

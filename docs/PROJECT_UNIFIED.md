@@ -1,12 +1,12 @@
 ﻿# WritingEditor 통합 프로젝트 문서 (단일 기준본)
 
 작성일: 2026-02-16  
-최종 갱신: 2026-03-01 (에디터 퍼스트 오버레이 패널 전면 재설계 반영)
+최종 갱신: 2026-03-01 (브랜딩 중심 UI 전면 재설계 2차 반영)
 기준 경로: `C:\dlatl\WritingEditor`
 기준 브랜치: `main`
 원격 저장소: `https://github.com/leydian/WritingEditor`
-현재 앱 버전: `index.html` -> `app.js?v=94`
-현재 스타일 버전: `index.html` -> `styles.css?v=17`
+현재 앱 버전: `index.html` -> `app.js?v=95`
+현재 스타일 버전: `index.html` -> `styles.css?v=18`
 
 ## 0. 진행현황 요약 (이번 사이클)
 
@@ -119,6 +119,25 @@
 - `editor-area`를 `display: flex` → `display: grid`로 변경
   - JS의 `gridTemplateRows` 설정이 이제 정상 적용 → 상하분할(top-bottom) 동작
 - 리사이저에 방향별 커서 스타일 추가 (`col-resize`/`row-resize`)
+
+18. 브랜딩 중심 UI 전면 재설계 2차 (2026-03-01)
+- 토큰 체계 확장(`styles/tokens.css`)
+  - 색/타이포/간격/레이어(z-index) 토큰을 세분화해 시각 시스템 표준화
+- 기본 스타일 정렬(`styles/base.css`)
+  - 배경 그라데이션, selection, focus-visible, 스크롤 톤을 브랜드 언어로 통일
+- 레이아웃 정교화(`styles/layout.css`)
+  - 에디터 우선 화면 강화, 패널/백드롭 깊이감 및 모션 규칙 통합
+- 컴포넌트 재작성(`styles/components.css`)
+  - 버튼 계층(기본/ghost/active) 통합
+  - 툴바/사이드바/카드형 패널/모달/명령팔레트의 쉘 규칙 통일
+- 모바일 브랜딩 강화(`styles/mobile.css`)
+  - 하단 액션바 시그니처 스타일 적용
+  - 더보기 다이얼로그를 바텀시트 톤으로 정렬
+- 상태 일관성 보강(`app.js`)
+  - split 버튼 active 상태를 `updatePanelToggleButtons`에서 일괄 관리
+  - split 전환 직후 상태 반영 보장
+- 캐시 버전 갱신(`index.html`)
+  - `styles.css?v=18`, `app.js?v=95`
 
 16. 에디터 퍼스트 오버레이 패널 전면 재설계 (2026-03-01)
 - 3단 그리드 구조 폐기 → 에디터가 항상 100% 너비 사용
@@ -241,6 +260,7 @@
 - 익명 로그인 사용자 표시: `익명로그인`
 - 브라우저 기본 대화상자 제거, 공통 모달 기반 상호작용으로 일원화
 - Focus Studio 지향 레이아웃(에디터 우선) 및 상단 툴바 조작 모델 도입
+- 브랜딩 중심 2차 재설계로 토큰/레이아웃/컴포넌트 시각 체계 통합
 
 ### 2.9 코드 구조(리팩터링 반영)
 
@@ -254,7 +274,7 @@
 - 히스토리 서비스: `history-service.js`
 - 타이머 서비스: `timer-service.js`
 - 세션 플로우 서비스: `session-flow-service.js`
-- 스타일 계층: `styles/*.css` (token/base/layout/component/mobile + legacy)
+- 스타일 계층: `styles/*.css` (token/base/layout/component/mobile)
 - 상태 정규화/히스토리/뽀모도로 계산: `state-utils.js`
 
 ---
