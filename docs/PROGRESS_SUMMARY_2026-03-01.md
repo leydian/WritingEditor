@@ -2,7 +2,7 @@
 
 기준 저장소: `https://github.com/leydian/WritingEditor`  
 기준 브랜치: `main`  
-반영 범위: 대화상자 UX 표준화 + 동기화 충돌 UX 개선 + 인증 메시지 표준화 + 조립층 분해 1/2/3/4차 + Focus Studio UI 재구성 1차 + 모바일 UI 전면 리팩터 + UI 전면 개편 및 PDF 내보내기 개선 + **WritingEditor UI 전면 재설계(에디터 퍼스트/오버레이 패널)** + **브랜딩 중심 UI 전면 재설계 2차**
+반영 범위: 대화상자 UX 표준화 + 동기화 충돌 UX 개선 + 인증 메시지 표준화 + 조립층 분해 1/2/3/4차 + Focus Studio UI 재구성 1차 + 모바일 UI 전면 리팩터 + UI 전면 개편 및 PDF 내보내기 개선 + **WritingEditor UI 전면 재설계(에디터 퍼스트/오버레이 패널)** + **브랜딩 중심 UI 전면 재설계 2차** + **라이트/다크 테마 토글**
 
 ## 1. 이번 작업 목표
 
@@ -317,6 +317,24 @@
   - 사이드바/기록패널 열림 시 백드롭/레이어 순서가 일관적인지 확인
 - 모바일 시나리오(360/390/430 폭)
   - 하단 액션바 가독성/터치 타깃/더보기 진입 동작 확인
+
+### 2.16 라이트/다크 테마 토글
+
+- 상태/저장소
+  - `app.js`에 테마 설정 키 `we-theme-v1` 추가
+  - 초기 로딩 시 저장 테마를 적용하고, 미설정 시 `prefers-color-scheme` 기반 기본값 적용
+- UI 진입점
+  - 데스크톱 툴바에 테마 버튼(`theme-toggle-btn`) 추가
+  - 모바일 더보기 시트에 테마 전환 버튼(`mobile-more-theme-btn`) 추가
+- 이벤트 바인딩
+  - `ui-bindings.js`에서 데스크톱/모바일 버튼 모두 `toggleTheme`으로 연결
+- 스타일 시스템
+  - `styles/tokens.css`: `:root[data-theme='dark']` 토큰 오버라이드 추가
+  - `styles/layout.css`: 메인/에디터/패널 계층 다크 오버라이드
+  - `styles/components.css`: 버튼/패널/달력/모달 다크 오버라이드
+  - `styles/mobile.css`: 모바일 액션바/더보기 다이얼로그 다크 오버라이드
+- 캐시 버전 갱신
+  - `styles.css?v=19`, `app.js?v=96`
 
 ## 3. 테스트 결과
 

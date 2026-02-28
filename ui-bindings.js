@@ -34,6 +34,7 @@
       renderTimer,
       applyPomodoroMinutesFromInputs,
       handleManualSync,
+      toggleTheme,
       exportTxt,
       exportPdf,
       authLogout,
@@ -68,6 +69,7 @@
     const calendarToolbarBtn = $('toggle-calendar-toolbar-btn');
     const topCommandBtn = $('top-command-btn');
     const manualSyncBtn = $('manual-sync-btn');
+    const themeToggleBtn = $('theme-toggle-btn');
     const historyOpenBtn = $('history-open-btn');
     const splitSingleBtn = $('split-single-btn');
     const splitVerticalBtn = $('split-vertical-btn');
@@ -82,6 +84,7 @@
     const mobileMoreDialog = $('mobile-more-dialog');
     const mobileMoreCloseBtn = $('mobile-more-close-btn');
     const mobileMoreHistoryBtn = $('mobile-more-history-btn');
+    const mobileMoreThemeBtn = $('mobile-more-theme-btn');
     const mobileMoreSplitSingleBtn = $('mobile-more-split-single-btn');
     const mobileMoreSplitVerticalBtn = $('mobile-more-split-vertical-btn');
     const mobileMoreSplitHorizontalBtn = $('mobile-more-split-horizontal-btn');
@@ -233,6 +236,7 @@
     if (manualSyncBtn) manualSyncBtn.onclick = () => {
       void handleManualSync();
     };
+    if (themeToggleBtn) themeToggleBtn.onclick = toggleTheme;
     if (splitSingleBtn) splitSingleBtn.onclick = () => switchSplit('single');
     if (splitVerticalBtn) splitVerticalBtn.onclick = () => switchSplit('vertical');
     if (splitHorizontalBtn) splitHorizontalBtn.onclick = () => switchSplit('horizontal');
@@ -255,6 +259,10 @@
     };
     if (mobileMoreHistoryBtn) mobileMoreHistoryBtn.onclick = () => {
       openHistoryDialog();
+      if (mobileMoreDialog && typeof mobileMoreDialog.close === 'function') mobileMoreDialog.close();
+    };
+    if (mobileMoreThemeBtn) mobileMoreThemeBtn.onclick = () => {
+      if (typeof toggleTheme === 'function') toggleTheme();
       if (mobileMoreDialog && typeof mobileMoreDialog.close === 'function') mobileMoreDialog.close();
     };
     if (mobileMoreSplitSingleBtn) mobileMoreSplitSingleBtn.onclick = () => {

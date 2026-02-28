@@ -183,3 +183,43 @@ textarea {
   height: 8px;
   min-height: 8px;
 }
+
+:root[data-theme='dark'] .main {
+  background: linear-gradient(180deg, #1b231f 0%, #161d19 100%);
+}
+
+:root[data-theme='dark'] .toolbar {
+  background: rgba(28, 36, 32, 0.9);
+  border-bottom-color: #36453d;
+}
+
+:root[data-theme='dark'] .editor-area {
+  background:
+    radial-gradient(540px 280px at 100% 0%, rgba(78, 181, 143, 0.09), transparent 70%),
+    linear-gradient(180deg, #1c241f 0%, #161d19 100%);
+}
+
+:root[data-theme='dark'] .pane {
+  background: linear-gradient(180deg, #2a342e 0%, #242d28 100%);
+  border-color: #3e4b43;
+}
+
+:root[data-theme='dark'] .pane.active {
+  border-color: #67b99a;
+  box-shadow: 0 0 0 2px rgba(78, 181, 143, 0.26), var(--fx-shadow-soft);
+}
+
+:root[data-theme='dark'] .pane-head {
+  color: #c3d0c6;
+  background: linear-gradient(180deg, #2f3a34 0%, #28322d 100%);
+  border-bottom-color: #3f4b44;
+}
+
+:root[data-theme='dark'] textarea {
+  color: #eef4ef;
+}
+
+:root[data-theme='dark'] .sidebar,
+:root[data-theme='dark'] .stats-panel {
+  background: linear-gradient(180deg, #26302b 0%, #1f2823 100%);
+}

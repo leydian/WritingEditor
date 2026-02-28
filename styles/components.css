@@ -782,3 +782,142 @@ dialog::backdrop {
   gap: 8px;
   flex-wrap: wrap;
 }
+
+:root[data-theme='dark'] button {
+  background: linear-gradient(180deg, #2e3933 0%, #27312c 100%);
+  border-color: #48584f;
+  color: #e3ece6;
+}
+
+:root[data-theme='dark'] button:hover {
+  background: linear-gradient(180deg, #37443c 0%, #2f3a34 100%);
+  border-color: #5d7267;
+}
+
+:root[data-theme='dark'] #auth-anon-login {
+  background: linear-gradient(180deg, #4eb58f 0%, #37906f 100%);
+  border-color: #2b765b;
+  color: #f3fffa;
+}
+
+:root[data-theme='dark'] #auth-login,
+:root[data-theme='dark'] #auth-signup {
+  color: #9fe5c8;
+  border-color: #4f836f;
+  background: #2a362f;
+}
+
+:root[data-theme='dark'] #top-command-btn,
+:root[data-theme='dark'] #manual-sync-btn,
+:root[data-theme='dark'] #toggle-sidebar-toolbar-btn,
+:root[data-theme='dark'] #toggle-calendar-toolbar-btn,
+:root[data-theme='dark'] #theme-toggle-btn,
+:root[data-theme='dark'] #history-open-btn,
+:root[data-theme='dark'] #export-txt-btn,
+:root[data-theme='dark'] #export-pdf-btn,
+:root[data-theme='dark'] #split-single-btn,
+:root[data-theme='dark'] #split-vertical-btn,
+:root[data-theme='dark'] #split-horizontal-btn {
+  background: transparent;
+  border-color: transparent;
+  color: #b6c5bb;
+}
+
+:root[data-theme='dark'] #top-command-btn:hover,
+:root[data-theme='dark'] #manual-sync-btn:hover,
+:root[data-theme='dark'] #toggle-sidebar-toolbar-btn:hover,
+:root[data-theme='dark'] #toggle-calendar-toolbar-btn:hover,
+:root[data-theme='dark'] #theme-toggle-btn:hover,
+:root[data-theme='dark'] #history-open-btn:hover,
+:root[data-theme='dark'] #export-txt-btn:hover,
+:root[data-theme='dark'] #export-pdf-btn:hover,
+:root[data-theme='dark'] #split-single-btn:hover,
+:root[data-theme='dark'] #split-vertical-btn:hover,
+:root[data-theme='dark'] #split-horizontal-btn:hover {
+  background: rgba(78, 181, 143, 0.18);
+  border-color: rgba(78, 181, 143, 0.35);
+  color: #e1f8ee;
+}
+
+:root[data-theme='dark'] #toggle-sidebar-toolbar-btn.active,
+:root[data-theme='dark'] #toggle-calendar-toolbar-btn.active,
+:root[data-theme='dark'] #theme-toggle-btn.active,
+:root[data-theme='dark'] #split-single-btn.active,
+:root[data-theme='dark'] #split-vertical-btn.active,
+:root[data-theme='dark'] #split-horizontal-btn.active {
+  background: linear-gradient(180deg, #274137 0%, #20352d 100%);
+  border-color: #5ba88b;
+  color: #d6f5e8;
+}
+
+:root[data-theme='dark'] .toolbar-doc-title {
+  color: #d3e6d8;
+  background: rgba(78, 181, 143, 0.15);
+  border-color: rgba(78, 181, 143, 0.34);
+}
+
+:root[data-theme='dark'] .pill-group {
+  background: rgba(78, 181, 143, 0.14);
+  border-color: rgba(78, 181, 143, 0.3);
+}
+
+:root[data-theme='dark'] .tree-item:hover {
+  background: #2e3a33;
+  border-color: #47584f;
+}
+
+:root[data-theme='dark'] .tree-item.active {
+  background: linear-gradient(180deg, #29473c 0%, #223b33 100%);
+  border-color: #5aa385;
+  color: #d4f0e2;
+}
+
+:root[data-theme='dark'] .timer-box,
+:root[data-theme='dark'] .daily-box,
+:root[data-theme='dark'] .calendar,
+:root[data-theme='dark'] .calendar-table-wrap {
+  background: linear-gradient(180deg, #2b352f 0%, #25302a 100%);
+  border-color: #3d4b43;
+}
+
+:root[data-theme='dark'] #daily-stats,
+:root[data-theme='dark'] .day,
+:root[data-theme='dark'] .calendar-table td {
+  color: #d7e2d9;
+}
+
+:root[data-theme='dark'] .day {
+  background: #2f3b34;
+  border-color: #48574e;
+}
+
+:root[data-theme='dark'] .day.weekday {
+  background: #39463f;
+  border-color: #54665c;
+}
+
+:root[data-theme='dark'] .day.today {
+  background: #4b4128;
+  border-color: #c69a4a;
+}
+
+:root[data-theme='dark'] .calendar-table th {
+  background: #324038;
+  color: #d3dfd5;
+  border-bottom-color: #4a5b52;
+}
+
+:root[data-theme='dark'] .auth-card,
+:root[data-theme='dark'] dialog,
+:root[data-theme='dark'] .command-item,
+:root[data-theme='dark'] #history-list li {
+  background: linear-gradient(180deg, #2a342e 0%, #242e28 100%);
+  border-color: #3f4c44;
+  color: #e5eee8;
+}
+
+:root[data-theme='dark'] .pill {
+  background: #303b35;
+  border-color: #46554d;
+  color: #c4d0c7;
+}

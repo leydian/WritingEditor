@@ -3,6 +3,7 @@
 const KEY = 'we-proto-state-v1';
 const SB_KEY = 'we-supabase-config-v1';
 const LAYOUT_KEY = 'we-layout-prefs-v1';
+const THEME_KEY = 'we-theme-v1';
 const LAST_USER_KEY = 'we-last-user-id';
 const ENCRYPTION_MIGRATION_KEY = 'we-encryption-migrated-v1';
 const AUTO_SYNC_INTERVAL_MS = 30 * 60 * 1000;
@@ -114,6 +115,7 @@ let encryptionUnlockResolver = null;
 let commandPaletteSelection = 0;
 const dirtyDocIds = new Set();
 const layoutPrefs = loadLayoutPrefs();
+let themeMode = loadThemePreference();
 const state = loadState();
 const dialogApi = (
   dialogService
@@ -239,6 +241,37 @@ function loadLayoutPrefs() {
 
 function saveLayoutPrefs() {
   safeSetItem(LAYOUT_KEY, JSON.stringify(layoutPrefs));
+}
+
+function getSystemThemePreference() {
+  try {
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      return 'dark';
+    }
+  } catch (_error) {
+    // noop
+  }
+  return 'light';
+}
+
+function loadThemePreference() {
+  const raw = safeGetItem(THEME_KEY);
+  if (raw === 'dark' || raw === 'light') return raw;
+  return getSystemThemePreference();
+}
+
+function applyTheme(mode, options = {}) {
+  const normalized = mode === 'dark' ? 'dark' : 'light';
+  themeMode = normalized;
+  const root = document.documentElement;
+  if (root) root.setAttribute('data-theme', normalized);
+  if (options.persist !== false) safeSetItem(THEME_KEY, normalized);
+}
+
+function toggleTheme() {
+  const next = themeMode === 'dark' ? 'light' : 'dark';
+  applyTheme(next, { persist: true });
+  updatePanelToggleButtons();
 }
 
 function defaultState() {
@@ -3196,6 +3229,8 @@ function updatePanelToggleButtons() {
   const splitHorizontalBtn = $('split-horizontal-btn');
   const mobileDocBtn = $('mobile-doc-btn');
   const mobileCalendarBtn = $('mobile-calendar-btn');
+  const themeToggleBtn = $('theme-toggle-btn');
+  const mobileMoreThemeBtn = $('mobile-more-theme-btn');
   const isMobileMini = window.innerWidth <= MOBILE_MINI_BREAKPOINT;
   const showSidebar = isMobileMini ? mobileMiniSidebarOpen : !!layoutPrefs.showSidebar;
   const showCalendar = isMobileMini ? mobileMiniCalendarOpen : !!layoutPrefs.showCalendar;
@@ -3229,6 +3264,16 @@ function updatePanelToggleButtons() {
     mobileCalendarBtn.textContent = showCalendar ? '기록 닫기' : '기록';
     mobileCalendarBtn.setAttribute('aria-label', showCalendar ? '기록 패널 닫기' : '기록 패널 열기');
     mobileCalendarBtn.classList.toggle('active', showCalendar);
+  }
+  if (themeToggleBtn) {
+    const isDark = themeMode === 'dark';
+    themeToggleBtn.textContent = isDark ? '☀' : '🌙';
+    themeToggleBtn.title = isDark ? '라이트 테마로 전환' : '다크 테마로 전환';
+    themeToggleBtn.setAttribute('aria-label', isDark ? '라이트 테마로 전환' : '다크 테마로 전환');
+    themeToggleBtn.classList.toggle('active', isDark);
+  }
+  if (mobileMoreThemeBtn) {
+    mobileMoreThemeBtn.textContent = themeMode === 'dark' ? '라이트 테마' : '다크 테마';
   }
   if (splitSingleBtn) {
     splitSingleBtn.classList.toggle('active', state.split === 'single');
@@ -3347,6 +3392,7 @@ function bindEvents() {
     renderTimer,
     applyPomodoroMinutesFromInputs,
     handleManualSync,
+    toggleTheme,
     exportTxt,
     exportPdf,
     authLogout,
@@ -3474,6 +3520,7 @@ function bindSidebarResize() {
 
 async function init() {
   try {
+    applyTheme(themeMode, { persist: false });
     setAuthStatus('로그인/회원가입 또는 익명으로 시작을 선택하세요.');
 
     const config = getEffectiveSupabaseConfig();

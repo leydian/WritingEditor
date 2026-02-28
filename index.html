@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://unpkg.com; connect-src 'self' https://*.supabase.co; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'" />
   <title>WritingEditor Prototype</title>
-  <link rel="stylesheet" href="styles.css?v=18" />
+  <link rel="stylesheet" href="styles.css?v=19" />
 </head>
 <body>
   <div id="auth-gate" class="auth-gate">
@@ -57,6 +57,7 @@
         <div class="right-tools">
           <button id="top-command-btn" type="button" title="명령 팔레트 (Ctrl/Cmd+K)">⌘</button>
           <button id="manual-sync-btn" type="button" title="지금 동기화">☁</button>
+          <button id="theme-toggle-btn" type="button" title="다크 테마로 전환">🌙</button>
           <div class="pill-group">
             <button id="split-single-btn" type="button" title="단일 창">▯</button>
             <button id="split-vertical-btn" type="button" title="좌우 분할">▯|▯</button>
@@ -156,6 +157,7 @@
     <h3>추가 작업</h3>
     <div class="mobile-more-grid">
       <button id="mobile-more-history-btn" type="button">히스토리</button>
+      <button id="mobile-more-theme-btn" type="button">테마 전환</button>
       <button id="mobile-more-split-single-btn" type="button">단일 레이아웃</button>
       <button id="mobile-more-split-vertical-btn" type="button">좌우 분할</button>
       <button id="mobile-more-split-horizontal-btn" type="button">상하 분할</button>
@@ -281,6 +283,6 @@
   <script src="timer-service.js?v=1"></script>
   <script src="session-flow-service.js?v=1"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
-  <script src="app.js?v=95"></script>
+  <script src="app.js?v=96"></script>
 </body>
 </html>

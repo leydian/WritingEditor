@@ -1,12 +1,12 @@
 ﻿# WritingEditor 통합 프로젝트 문서 (단일 기준본)
 
 작성일: 2026-02-16  
-최종 갱신: 2026-03-01 (브랜딩 중심 UI 전면 재설계 2차 반영)
+최종 갱신: 2026-03-01 (라이트/다크 테마 토글 반영)
 기준 경로: `C:\dlatl\WritingEditor`
 기준 브랜치: `main`
 원격 저장소: `https://github.com/leydian/WritingEditor`
-현재 앱 버전: `index.html` -> `app.js?v=95`
-현재 스타일 버전: `index.html` -> `styles.css?v=18`
+현재 앱 버전: `index.html` -> `app.js?v=96`
+현재 스타일 버전: `index.html` -> `styles.css?v=19`
 
 ## 0. 진행현황 요약 (이번 사이클)
 
@@ -139,6 +139,16 @@
 - 캐시 버전 갱신(`index.html`)
   - `styles.css?v=18`, `app.js?v=95`
 
+19. 라이트/다크 테마 토글 도입 (2026-03-01)
+- 사용자 테마 설정 키 추가: `we-theme-v1`
+- 앱 초기화 시 저장된 테마(없으면 시스템 테마) 적용
+- 툴바 버튼(`theme-toggle-btn`) 및 모바일 더보기 버튼(`mobile-more-theme-btn`)에서 테마 전환 지원
+- 다크 테마 토큰/오버라이드 추가:
+  - `styles/tokens.css`: `:root[data-theme='dark']` 기본 색상/레이어 토큰
+  - `styles/layout.css`: 메인/에디터/패널 계층 다크 오버라이드
+  - `styles/components.css`: 버튼/카드/달력/모달 계층 다크 오버라이드
+  - `styles/mobile.css`: 모바일 액션바/더보기 다이얼로그 다크 오버라이드
+
 16. 에디터 퍼스트 오버레이 패널 전면 재설계 (2026-03-01)
 - 3단 그리드 구조 폐기 → 에디터가 항상 100% 너비 사용
 - 사이드바/통계 패널 → `position: fixed` 오버레이, `transform` 슬라이드 토글
@@ -256,6 +266,7 @@
 ### 2.8 UI/테마
 
 - 회색+그린 톤으로 전체 테마 통일
+- 라이트/다크 테마 토글 지원(`we-theme-v1` 저장)
 - 툴바/중앙 에디터 잔여 블루 톤 제거
 - 익명 로그인 사용자 표시: `익명로그인`
 - 브라우저 기본 대화상자 제거, 공통 모달 기반 상호작용으로 일원화

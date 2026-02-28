@@ -62,3 +62,30 @@
   --fx-layer-dialog: 90;
   --fx-layer-mobile-bar: 80;
 }
+
+:root[data-theme='dark'] {
+  --fx-bg: #121614;
+  --fx-bg-soft: #1a211d;
+  --fx-surface: #1f2823;
+  --fx-surface-strong: #25302a;
+  --fx-surface-muted: #202924;
+  --fx-ink: #ecf2ed;
+  --fx-ink-soft: #b9c7bc;
+  --fx-ink-muted: #95a59a;
+  --fx-border: #3a463f;
+  --fx-border-strong: #4a5c52;
+
+  --fx-accent: #4eb58f;
+  --fx-accent-strong: #37906f;
+  --fx-accent-soft: #213a30;
+  --fx-accent-ink: #d8f4e8;
+
+  --fx-warn: #d5a253;
+  --fx-danger: #df7272;
+  --fx-success: #6ec49e;
+
+  --fx-shadow-soft: 0 6px 18px rgba(0, 0, 0, 0.32);
+  --fx-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+  --fx-shadow-overlay: 0 24px 52px rgba(0, 0, 0, 0.58);
+  --fx-backdrop: rgba(7, 10, 8, 0.66);
+}
