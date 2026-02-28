@@ -68,6 +68,16 @@
   - `tests/history-service.test.js`
   - `tests/timer-service.test.js`
 
+13. 조립층 분해 4차 (2026-03-01)
+- 세션/인증 플로우 오케스트레이션을 `session-flow-service.js`로 분리
+  - 회원가입/로그인/익명로그인
+  - 계정 전환
+  - 로그아웃
+  - 탈퇴 확인/실행
+- `app.js`의 인증 관련 함수는 `SessionFlowService.createSessionFlowActions` 위임 우선으로 변경
+- 테스트 추가:
+  - `tests/session-flow-service.test.js`
+
 8. 동기화 충돌 UX 개선 (2026-03-01)
 - 충돌 분기를 단순 `confirm`에서 명시적 3지선다로 전환
   - `로컬로 덮어쓰기`
@@ -186,6 +196,7 @@
 - 트리 조작 서비스: `tree-service.js`
 - 히스토리 서비스: `history-service.js`
 - 타이머 서비스: `timer-service.js`
+- 세션 플로우 서비스: `session-flow-service.js`
 - 상태 정규화/히스토리/뽀모도로 계산: `state-utils.js`
 
 ---
@@ -230,6 +241,7 @@ node .\scripts\security-preflight-check.js
 - `tests/tree-service.test.js`
 - `tests/history-service.test.js`
 - `tests/timer-service.test.js`
+- `tests/session-flow-service.test.js`
 
 검증 명령:
 
@@ -245,6 +257,7 @@ node .\tests\dialog-service.test.js
 node .\tests\tree-service.test.js
 node .\tests\history-service.test.js
 node .\tests\timer-service.test.js
+node .\tests\session-flow-service.test.js
 node .\scripts\security-preflight-check.js
 ```
 

@@ -2,7 +2,7 @@
 
 기준 저장소: `https://github.com/leydian/WritingEditor`  
 기준 브랜치: `main`  
-반영 범위: 대화상자 UX 표준화 + 동기화 충돌 UX 개선 + 인증 메시지 표준화 + 조립층 분해 1/2/3차
+반영 범위: 대화상자 UX 표준화 + 동기화 충돌 UX 개선 + 인증 메시지 표준화 + 조립층 분해 1/2/3/4차
 
 ## 1. 이번 작업 목표
 
@@ -92,6 +92,17 @@
   - `app.js`의 도메인별 책임이 추가로 축소됨
   - 히스토리/타이머 회귀를 독립 테스트로 검증 가능해짐
 
+### 2.8 조립층 분해 4차 (`session-flow-service` 모듈 분리)
+
+- 신규 모듈 `session-flow-service.js` 추가
+  - `createSessionFlowActions(deps)` 팩토리 제공
+  - API: `authSignUp`, `authLogin`, `authAnonymousLogin`, `openUpgradeDialog`, `closeUpgradeDialog`, `upgradeAnonymousAccount`, `authLogout`, `openWithdrawDialog`, `closeWithdrawDialog`, `updateWithdrawConfirmState`, `authWithdraw`
+- `app.js`의 인증/세션 함수는 서비스 위임 우선으로 변경
+- `index.html` 스크립트 로드 순서에 `session-flow-service.js` 추가
+- 결과:
+  - 인증 오케스트레이션이 조립층에서 분리됨
+  - 인증 플로우 회귀를 독립 테스트로 검증 가능해짐
+
 ## 3. 테스트 결과
 
 실행 항목:
@@ -108,6 +119,7 @@ node .\tests\dialog-service.test.js
 node .\tests\tree-service.test.js
 node .\tests\history-service.test.js
 node .\tests\timer-service.test.js
+node .\tests\session-flow-service.test.js
 node .\scripts\security-preflight-check.js
 ```
 
@@ -123,6 +135,7 @@ node .\scripts\security-preflight-check.js
   - `tree-service.js`
   - `history-service.js`
   - `timer-service.js`
+  - `session-flow-service.js`
   - `app.js`
   - `auth-service.js`
   - `index.html`
@@ -132,6 +145,7 @@ node .\scripts\security-preflight-check.js
   - `tests/tree-service.test.js`
   - `tests/history-service.test.js`
   - `tests/timer-service.test.js`
+  - `tests/session-flow-service.test.js`
 - 문서 갱신
   - `README.md`
   - `docs/PROJECT_UNIFIED.md`
@@ -142,7 +156,7 @@ node .\scripts\security-preflight-check.js
 1. 사용자 상호작용이 앱 내부 모달로 일관화되어 UX 톤이 정리됨
 2. 충돌 처리에서 “취소” 분기가 명시되어 오동작 가능성이 감소함
 3. 인증 메시지는 reason 코드 기반으로 통일되었지만, 서버 원문 에러와의 매핑 보강은 추가 여지 있음
-4. 대화상자(`dialog-service`), 트리(`tree-service`), 히스토리(`history-service`), 타이머(`timer-service`)가 분리되어 `app.js` 조립 중심 구조로 단계적 전환이 진행됨
+4. 대화상자/트리/히스토리/타이머/세션 플로우 서비스 분리로 `app.js` 조립 중심 구조 전환이 단계적으로 진행됨
 
 ## 6. 다음 권장 과제
 

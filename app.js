@@ -36,6 +36,7 @@ const dialogService = (typeof DialogService !== 'undefined' && DialogService) ? 
 const treeService = (typeof TreeService !== 'undefined' && TreeService) ? TreeService : null;
 const historyService = (typeof HistoryService !== 'undefined' && HistoryService) ? HistoryService : null;
 const timerService = (typeof TimerService !== 'undefined' && TimerService) ? TimerService : null;
+const sessionFlowService = (typeof SessionFlowService !== 'undefined' && SessionFlowService) ? SessionFlowService : null;
 
 function seoulDateParts(date = new Date()) {
   const parts = new Intl.DateTimeFormat('en-CA', {
@@ -163,6 +164,39 @@ const timerActions = (
     saveState,
     updateProgress,
     getById: $,
+  })
+  : null;
+const sessionFlowActions = (
+  sessionFlowService
+  && typeof sessionFlowService.createSessionFlowActions === 'function'
+)
+  ? sessionFlowService.createSessionFlowActions({
+    getById: $,
+    authService,
+    resolveIdentifier,
+    resolveAuthResultMessage,
+    isAnonymousUser,
+    defaultState,
+    replaceState,
+    renderAll,
+    clearLocalEditorData,
+    executeAccountDeletionFlow,
+    flushHistorySnapshots,
+    pushRemoteState,
+    setAuthStatus,
+    setSyncStatus,
+    logServiceEvent,
+    showUiError,
+    openConfirmDialog,
+    getSupabase: () => supabase,
+    getSupabaseUser: () => supabaseUser,
+    setPendingAuthPassword: (value) => { pendingAuthPassword = value; },
+    setShowWithdrawOnAuthGate: (value) => { showWithdrawOnAuthGate = !!value; },
+    getShowWithdrawOnAuthGate: () => showWithdrawOnAuthGate,
+    getEnsureFreshAuthSession: () => ensureFreshAuthSession,
+    closeUpgradeDialog,
+    closeWithdrawDialog,
+    getWithDrawConfirmText: () => WITHDRAW_CONFIRM_TEXT,
   })
   : null;
 
@@ -2578,6 +2612,9 @@ async function handleManualSync() {
 }
 
 async function authSignUp() {
+  if (sessionFlowActions && typeof sessionFlowActions.authSignUp === 'function') {
+    return sessionFlowActions.authSignUp();
+  }
   if (!authService || typeof authService.signUpWithIdentifier !== 'function') {
     setAuthStatus('회원가입 기능을 초기화하지 못했습니다. 새로고침 후 다시 시도하세요.');
     return;
@@ -2611,6 +2648,9 @@ async function authSignUp() {
 }
 
 async function authLogin() {
+  if (sessionFlowActions && typeof sessionFlowActions.authLogin === 'function') {
+    return sessionFlowActions.authLogin();
+  }
   if (!authService || typeof authService.loginWithIdentifier !== 'function') {
     setAuthStatus('로그인 기능을 초기화하지 못했습니다. 새로고침 후 다시 시도하세요.');
     return;
@@ -2646,6 +2686,9 @@ async function authLogin() {
 }
 
 async function authAnonymousLogin() {
+  if (sessionFlowActions && typeof sessionFlowActions.authAnonymousLogin === 'function') {
+    return sessionFlowActions.authAnonymousLogin();
+  }
   if (!authService || typeof authService.anonymousLogin !== 'function') {
     setAuthStatus('익명 로그인 기능을 초기화하지 못했습니다. 새로고침 후 다시 시도하세요.');
     return;
@@ -2673,6 +2716,10 @@ async function authAnonymousLogin() {
 }
 
 function openUpgradeDialog() {
+  if (sessionFlowActions && typeof sessionFlowActions.openUpgradeDialog === 'function') {
+    sessionFlowActions.openUpgradeDialog();
+    return;
+  }
   const dlg = $('upgrade-dialog');
   const emailInput = $('upgrade-email');
   const passwordInput = $('upgrade-password');
@@ -2683,12 +2730,19 @@ function openUpgradeDialog() {
 }
 
 function closeUpgradeDialog() {
+  if (sessionFlowActions && typeof sessionFlowActions.closeUpgradeDialog === 'function') {
+    sessionFlowActions.closeUpgradeDialog();
+    return;
+  }
   const dlg = $('upgrade-dialog');
   if (!dlg || typeof dlg.close !== 'function') return;
   dlg.close();
 }
 
 async function upgradeAnonymousAccount() {
+  if (sessionFlowActions && typeof sessionFlowActions.upgradeAnonymousAccount === 'function') {
+    return sessionFlowActions.upgradeAnonymousAccount();
+  }
   if (!authService || typeof authService.upgradeAnonymousAccount !== 'function') {
     setAuthStatus('계정 전환 기능을 초기화하지 못했습니다. 새로고침 후 다시 시도하세요.');
     return;
@@ -2747,6 +2801,9 @@ async function upgradeAnonymousAccount() {
 }
 
 async function authLogout() {
+  if (sessionFlowActions && typeof sessionFlowActions.authLogout === 'function') {
+    return sessionFlowActions.authLogout();
+  }
   if (!supabase) {
     setAuthStatus('현재 로그인 세션이 없습니다.');
     return;
@@ -2788,6 +2845,10 @@ async function authLogout() {
 }
 
 function openWithdrawDialog() {
+  if (sessionFlowActions && typeof sessionFlowActions.openWithdrawDialog === 'function') {
+    sessionFlowActions.openWithdrawDialog();
+    return;
+  }
   const dlg = $('withdraw-dialog');
   const check = $('withdraw-confirm-check');
   const textInput = $('withdraw-confirm-text');
@@ -2810,12 +2871,20 @@ function openWithdrawDialog() {
 }
 
 function closeWithdrawDialog() {
+  if (sessionFlowActions && typeof sessionFlowActions.closeWithdrawDialog === 'function') {
+    sessionFlowActions.closeWithdrawDialog();
+    return;
+  }
   const dlg = $('withdraw-dialog');
   if (!dlg || typeof dlg.close !== 'function') return;
   dlg.close();
 }
 
 function updateWithdrawConfirmState() {
+  if (sessionFlowActions && typeof sessionFlowActions.updateWithdrawConfirmState === 'function') {
+    sessionFlowActions.updateWithdrawConfirmState();
+    return;
+  }
   const confirmBtn = $('withdraw-confirm-btn');
   const check = $('withdraw-confirm-check');
   const textInput = $('withdraw-confirm-text');
@@ -3006,6 +3075,9 @@ async function executeAccountDeletionFlow(user, options = {}) {
 }
 
 async function authWithdraw() {
+  if (sessionFlowActions && typeof sessionFlowActions.authWithdraw === 'function') {
+    return sessionFlowActions.authWithdraw();
+  }
   if (!supabase) {
     setAuthStatus('먼저 설정 저장을 눌러 Supabase 연결을 초기화하세요.');
     return;
