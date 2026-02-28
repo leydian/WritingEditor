@@ -41,12 +41,15 @@
   min-height: 0;
   padding: 20px;
   background: var(--fx-surface-strong);
-  display: flex;
-  gap: 20px;
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
+  gap: 0;
 }
 
 .pane {
-  flex: 1;
+  min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   border-radius: var(--fx-radius-md);
@@ -164,15 +167,27 @@ textarea {
   display: none;
 }
 
+/* Editor split resizer — direction depends on split mode */
 .editor-split-resizer {
-  width: 4px;
-  margin: 0 -2px;
   z-index: 5;
-  cursor: col-resize;
-  transition: var(--fx-transition);
   background: transparent;
+  transition: background 0.15s ease;
 }
 
 .editor-split-resizer:hover {
   background: var(--fx-accent-soft);
+}
+
+/* Vertical split: left-right divider */
+.editor-area.vertical .editor-split-resizer {
+  cursor: col-resize;
+  width: 8px;
+  min-width: 8px;
+}
+
+/* Horizontal split: top-bottom divider */
+.editor-area.horizontal .editor-split-resizer {
+  cursor: row-resize;
+  height: 8px;
+  min-height: 8px;
 }
