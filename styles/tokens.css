@@ -1,20 +1,31 @@
 :root {
-  --fx-bg: #f4f2ec;
-  --fx-bg-soft: #ece7dc;
-  --fx-surface: #fbfaf7;
+  /* Core Palette */
+  --fx-bg: #f5f4f0;
+  --fx-bg-soft: #edebe4;
+  --fx-surface: #fdfcf9;
   --fx-surface-strong: #ffffff;
-  --fx-ink: #1d201b;
-  --fx-ink-soft: #4f564c;
-  --fx-border: #d2ccbc;
-  --fx-border-strong: #bcb4a1;
-  --fx-accent: #275d4a;
-  --fx-accent-strong: #1f4f3e;
-  --fx-warn: #9a6113;
-  --fx-danger: #9f2f2f;
-  --fx-success: #1e6b4e;
-  --fx-shadow: 0 16px 36px rgba(29, 32, 27, 0.12);
-  --fx-shadow-soft: 0 8px 20px rgba(29, 32, 27, 0.08);
-  --fx-radius-sm: 10px;
-  --fx-radius-md: 14px;
-  --fx-radius-lg: 20px;
+  --fx-ink: #1a1c18;
+  --fx-ink-soft: #5c6057;
+  --fx-border: #dcd7ca;
+  --fx-border-strong: #c8c2b0;
+
+  /* Brand Colors */
+  --fx-accent: #2d5a4c;
+  --fx-accent-soft: #ebf2ef;
+  --fx-accent-strong: #1e3f35;
+
+  /* Status Colors */
+  --fx-warn: #b4781d;
+  --fx-danger: #a13d3d;
+  --fx-success: #2d8a66;
+
+  /* Shadows & Radius */
+  --fx-shadow: 0 12px 32px rgba(26, 28, 24, 0.08);
+  --fx-shadow-soft: 0 4px 12px rgba(26, 28, 24, 0.05);
+  --fx-radius-sm: 8px;
+  --fx-radius-md: 12px;
+  --fx-radius-lg: 16px;
+
+  /* Transitions */
+  --fx-transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }

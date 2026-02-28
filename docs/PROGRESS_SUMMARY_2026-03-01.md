@@ -2,7 +2,7 @@
 
 기준 저장소: `https://github.com/leydian/WritingEditor`  
 기준 브랜치: `main`  
-반영 범위: 대화상자 UX 표준화 + 동기화 충돌 UX 개선 + 인증 메시지 표준화 + 조립층 분해 1/2/3/4차 + Focus Studio UI 재구성 1차
+반영 범위: 대화상자 UX 표준화 + 동기화 충돌 UX 개선 + 인증 메시지 표준화 + 조립층 분해 1/2/3/4차 + Focus Studio UI 재구성 1차 + 모바일 UI 전면 리팩터
 
 ## 1. 이번 작업 목표
 
@@ -116,6 +116,58 @@
 - 결과:
   - 에디터 중심 조작 흐름 강화
   - 기존 기능 로직 유지한 상태로 UI 전면 재정렬
+
+### 2.10 모바일 UI 전면 리팩터
+
+- `index.html`에 모바일 전용 탐색 레이어 추가
+  - 하단 고정 액션바: `mobile-action-bar`
+  - 더보기 시트: `mobile-more-dialog`
+- `ui-bindings.js`에 모바일 버튼 이벤트 연결 추가
+  - 문서/기록 패널 토글
+  - 수동 동기화
+  - 명령 팔레트
+  - 더보기(히스토리/분할/TXT/PDF)
+- `app.js` 레이아웃 반영
+  - 모바일에서 엣지바(`show-tree-bar`, `show-calendar-bar`) 비노출
+  - 모바일 액션바 표시 상태를 `applyAppLayout`에서 제어
+  - 문서/기록 버튼 활성 상태/라벨을 `updatePanelToggleButtons`에서 동기화
+- 스타일 계층 정리
+  - `styles.css`에서 `styles/legacy.css` import 제거(모바일/신규 테마 기준 단일화)
+  - `styles/mobile.css`로 모바일 레이아웃 규칙 통합
+  - `styles/legacy.css`에서 모바일 미디어쿼리/모바일 애니메이션 블록 제거
+  - 터치 타깃 하한(44px) 및 safe-area 하단 여백 반영
+- PDF 내보내기 경로 개선
+  - `window.print` 기반 새 창 출력 방식에서 `html2pdf` 기반 파일 생성 방식으로 전환
+  - `index.html`에 `html2pdf.bundle.min.js` 로드 추가
+  - 오류 시 공통 안내 모달로 실패 메시지 노출
+
+- 결과:
+  - 360~430px 폭에서 상단 툴바 과밀 이슈 완화
+  - 모바일 주 기능 접근 경로 단순화(한 손 조작 중심)
+  - 모바일 스타일 충돌 리스크 축소(단일 소스화)
+
+### 2.11 파일별 상세 변경 요약
+
+- `index.html`
+  - 모바일 하단 액션바/더보기 시트 마크업 추가
+  - `html2pdf` 스크립트 로드 추가
+  - 캐시 버전 갱신(`styles.css?v=16`, `app.js?v=93`)
+- `ui-bindings.js`
+  - 모바일 액션바 버튼 이벤트 바인딩 추가
+  - 더보기 시트 열기/닫기/외부 클릭 제어 추가
+  - 모바일 드로어 닫힘 이벤트와 더보기 시트 간 충돌 방지 처리
+- `app.js`
+  - 모바일 액션바 상태 반영(`applyAppLayout`, `updatePanelToggleButtons`)
+  - 모바일에서 기존 엣지바 트리거 비노출 처리
+  - PDF 내보내기 경로를 `html2pdf` 기반으로 교체
+- `styles.css`
+  - `styles/legacy.css` import 제거
+- `styles/mobile.css`
+  - 모바일 전용 레이아웃/드로어/하단 액션바/더보기 시트 스타일 통합
+- `styles/legacy.css`
+  - 모바일 미디어쿼리/모바일 전용 키프레임 제거
+- `styles/tokens.css`, `styles/base.css`, `styles/layout.css`, `styles/components.css`
+  - Focus Studio 톤앤매너 기반 시각 토큰/레이아웃/컴포넌트 스타일 정비
 
 ## 3. 테스트 결과
 

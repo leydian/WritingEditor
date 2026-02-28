@@ -4,7 +4,7 @@
 
 ## 프로젝트 구조
 
-- `index.html`: 앱 엔트리
+- `index.html`: 앱 엔트리(모바일 하단 액션바/더보기 시트 포함)
 - `app.js`: 앱 부트스트랩/조립 로직(서비스/유틸 연결)
 - `crypto-utils.js`: 암복호화 유틸(AES-GCM + PBKDF2)
 - `styles.css`: 스타일
@@ -58,4 +58,4 @@ node .\scripts\security-preflight-check.js
 1. `app.js` 2차 분해(문서트리/히스토리/타이머/인증 조립 경계 분리)
 2. 통합 흐름 테스트 보강(인증-암호화-동기화-로그아웃)
 3. 암호화 잠금 해제/재암호화 UX 고도화
-4. 모바일 실단말 회귀(iOS Safari, Android Chrome)
+4. 모바일 실단말 회귀(iOS Safari, Android Chrome) 및 하단 액션바 UX 튜닝

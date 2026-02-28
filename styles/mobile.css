@@ -5,47 +5,203 @@
     padding: 8px;
   }
 
-  .toolbar {
-    border-radius: 12px;
-    margin-bottom: 10px;
+  .stats-panel,
+  .calendar-resizer {
+    display: none;
   }
 }
 
 @media (max-width: 900px) {
   .app {
-    padding: 0;
+    grid-template-columns: 1fr !important;
+    grid-auto-rows: auto;
+    min-height: 100vh;
+    padding: 0 0 calc(72px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .sidebar {
+    border-bottom: 1px solid var(--fx-border);
+    max-height: 34vh;
   }
 
   .main {
+    min-height: 66vh;
     border-radius: 0;
     border-left: 0;
     border-right: 0;
+    border-bottom: 0;
   }
 
   .toolbar {
-    top: 0;
-    border-radius: 0;
-    padding: 10px;
+    display: none;
   }
 
-  .left-tools,
-  .right-tools {
-    width: 100%;
+  .sidebar-resizer,
+  .calendar-resizer,
+  .editor-split-resizer,
+  .edge-bar {
+    display: none !important;
   }
 
-  #toggle-sidebar-toolbar-btn,
-  #toggle-calendar-toolbar-btn,
-  #manual-sync-btn,
-  #top-command-btn {
-    flex: 1;
+  .editor-area.vertical {
+    grid-template-columns: 1fr;
   }
 
-  .editor-area {
-    padding: 8px;
+  .editor-area.horizontal {
+    grid-template-rows: 1fr;
+  }
+
+  .pane {
+    min-height: 46vh;
   }
 
   textarea {
     font-size: 16px;
-    line-height: 1.8;
+    line-height: 1.78;
+    padding: 14px;
+  }
+
+  .panel-icon-btn {
+    width: 44px;
+    height: 44px;
+    font-size: 16px;
+  }
+
+  .mobile-mini .sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: min(86vw, 340px);
+    max-height: none;
+    border-right: 1px solid var(--fx-border);
+    border-bottom: none;
+    z-index: 60;
+    box-shadow: 18px 0 42px rgba(2, 8, 23, .3);
+    animation: mobileDrawerInLeft .16s ease-out;
+  }
+
+  .mobile-mini.mobile-mini-calendar-open .stats-panel {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    width: min(88vw, 360px);
+    display: block !important;
+    max-height: none;
+    z-index: 60;
+    border-left: 1px solid var(--fx-border);
+    box-shadow: -18px 0 42px rgba(2, 8, 23, .24);
+    animation: mobileDrawerInRight .16s ease-out;
+  }
+
+  .mobile-action-bar {
+    position: fixed;
+    left: 10px;
+    right: 10px;
+    bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+    z-index: 75;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
+    padding: 8px;
+    border-radius: 16px;
+    border: 1px solid var(--fx-border);
+    background: rgba(255, 255, 255, .95);
+    box-shadow: 0 12px 28px rgba(29, 32, 27, .14);
+    backdrop-filter: blur(10px);
+  }
+
+  .mobile-action-bar button {
+    min-height: 46px;
+    border-radius: 12px;
+    padding: 8px 6px;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .mobile-action-bar button.active {
+    background: linear-gradient(180deg, var(--fx-accent) 0%, var(--fx-accent-strong) 100%);
+    border-color: #1f4f3e;
+    color: #edf6f2;
+  }
+
+  .mobile-more-dialog {
+    width: min(96vw, 420px);
+    border-radius: var(--fx-radius-lg);
+    border: 1px solid var(--fx-border);
+    box-shadow: var(--fx-shadow);
+    padding: 14px;
+    background: #fff;
+    color: var(--fx-ink);
+  }
+
+  .mobile-more-dialog h3 {
+    margin: 0 0 10px;
+    font-size: 16px;
+  }
+
+  .mobile-more-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .mobile-more-grid button,
+  #mobile-more-close-btn {
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 640px) {
+  .sidebar,
+  .stats-panel {
+    padding: 10px;
+  }
+
+  .pane-head {
+    font-size: 13px;
+  }
+
+  button,
+  input {
+    min-height: 44px;
+  }
+
+  .mobile-action-bar {
+    left: 8px;
+    right: 8px;
+    gap: 6px;
+    padding: 6px;
+  }
+
+  .mobile-action-bar button {
+    font-size: 11px;
+    min-height: 44px;
+  }
+}
+
+@keyframes mobileDrawerInLeft {
+  from {
+    transform: translateX(-16px);
+    opacity: .9;
+  }
+
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes mobileDrawerInRight {
+  from {
+    transform: translateX(16px);
+    opacity: .9;
+  }
+
+  to {
+    transform: translateX(0);
+    opacity: 1;
   }
 }

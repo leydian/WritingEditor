@@ -1,12 +1,12 @@
 ﻿# WritingEditor 통합 프로젝트 문서 (단일 기준본)
 
 작성일: 2026-02-16  
-최종 갱신: 2026-03-01 (세션 플로우 분리 + Focus Studio UI 재구성 반영)  
+최종 갱신: 2026-03-01 (모바일 UI 전면 리팩터 반영)  
 기준 경로: `C:\dlatl\WritingEditor`  
 기준 브랜치: `main`  
 원격 저장소: `https://github.com/leydian/WritingEditor`  
-현재 앱 버전: `index.html` -> `app.js?v=92`  
-현재 스타일 버전: `index.html` -> `styles.css?v=15`
+현재 앱 버전: `index.html` -> `app.js?v=93`  
+현재 스타일 버전: `index.html` -> `styles.css?v=16`
 
 ## 0. 진행현황 요약 (이번 사이클)
 
@@ -94,6 +94,24 @@
   - 분할(단일/좌우/상하)
   - TXT/PDF 내보내기
 - `ui-bindings.js`에 툴바 버튼 이벤트 연결 추가(기존 로직 재사용)
+
+15. 모바일 UI 전면 리팩터 (2026-03-01)
+- 모바일 상단 과밀 툴바를 하단 고정 액션바(`mobile-action-bar`)로 전환
+- 모바일 전용 더보기 시트(`mobile-more-dialog`) 추가
+  - 히스토리
+  - 분할 전환(단일/좌우/상하)
+  - TXT/PDF 내보내기
+- `ui-bindings.js`에 모바일 액션바/더보기 이벤트 바인딩 추가
+- 모바일 CSS 단일화:
+  - `styles.css`에서 `styles/legacy.css` import 제거
+  - `styles/legacy.css`의 모바일 미디어쿼리/모바일 드로어 오버라이드 제거
+  - `styles/mobile.css`로 모바일 레이아웃/드로어/터치 타깃 규칙 이관
+- 모바일 닫힘 UX:
+  - 외부 탭 시 드로어 닫힘 유지
+  - 더보기 시트 오픈 중에는 드로어 자동 닫힘 트리거 방지
+- PDF 내보내기 경로를 `html2pdf` 기반으로 전환
+  - `window.print` 새 창 방식 제거
+  - 실패 시 공통 안내 모달로 오류 노출
 
 8. 동기화 충돌 UX 개선 (2026-03-01)
 - 충돌 분기를 단순 `confirm`에서 명시적 3지선다로 전환
@@ -192,7 +210,9 @@
 ### 2.7 모바일 / 내보내기
 
 - 모바일 미니모드(`<=900px`) + 문서/달력 드로어 토글
+- 모바일 하단 액션바 + 더보기 시트 기반 탐색 모델 적용
 - TXT/PDF 내보내기 지원
+- PDF는 `html2pdf` 기반 파일 생성 방식 사용
 - iOS Safari 공유시트 fallback, TXT BOM 처리 보강 완료
 
 ### 2.8 UI/테마

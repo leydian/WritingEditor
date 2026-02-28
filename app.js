@@ -2278,46 +2278,46 @@ async function exportPdf() {
   const d = getDoc(state.activeDocA);
   if (!d) return;
 
-  const w = window.open('', '_blank');
-  if (!w) {
-    await openNoticeDialog({
-      title: 'PDF 내보내기 실패',
-      message: '내보내기 창을 열 수 없습니다. 브라우저 팝업 차단을 해제한 뒤 다시 시도하세요.',
-    });
-    return;
-  }
+  const container = document.createElement('div');
+  container.style.padding = '40px';
+  container.style.color = '#1d201b';
+  container.style.fontFamily = '"IBM Plex Sans KR", "Pretendard", "Noto Sans KR", sans-serif';
 
-  const doc = w.document;
-  doc.open();
-  doc.write('<!doctype html><html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title></title></head><body></body></html>');
-  doc.close();
+  const h1 = document.createElement('h1');
+  h1.textContent = d.name || '문서';
+  h1.style.fontSize = '24pt';
+  h1.style.marginBottom = '20px';
+  h1.style.borderBottom = '1px solid #d2ccbc';
+  h1.style.paddingBottom = '10px';
+
+  const pre = document.createElement('pre');
+  pre.style.whiteSpace = 'pre-wrap';
+  pre.style.fontFamily = '"Iowan Old Style", "Noto Serif KR", serif';
+  pre.style.fontSize = '12pt';
+  pre.style.lineHeight = '1.8';
+  pre.textContent = String(d.content || '');
+
+  container.appendChild(h1);
+  container.appendChild(pre);
+
+  const opt = {
+    margin: 15,
+    filename: `${(d.name || 'document').replace(/\.[^/.]+$/, '')}_${todayKey()}.pdf`,
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  };
 
   try {
-    if (w.opener) w.opener = null;
-  } catch (_error) {
-    // noop
+    // @ts-ignore
+    await html2pdf().set(opt).from(container).save();
+  } catch (err) {
+    console.error('PDF export failed', err);
+    await openNoticeDialog({
+      title: 'PDF 내보내기 실패',
+      message: 'PDF 생성 중 오류가 발생했습니다. 브라우저가 html2pdf 라이브러리를 차단했거나 예상치 못한 오류입니다.',
+    });
   }
-
-  const safeName = String(d.name || '문서');
-  doc.title = safeName;
-
-  const title = doc.createElement('h1');
-  title.textContent = safeName;
-  const content = doc.createElement('pre');
-  content.style.whiteSpace = 'pre-wrap';
-  content.style.fontFamily = 'sans-serif';
-  content.textContent = String(d.content || '');
-  doc.body.appendChild(title);
-  doc.body.appendChild(content);
-  // Mobile browsers often block or ignore immediate print; keep manual print as fallback.
-  setTimeout(() => {
-    try {
-      w.focus();
-      w.print();
-    } catch (_error) {
-      // noop
-    }
-  }, 50);
 }
 
 function makeUtf8TxtBlob(text) {
@@ -3190,6 +3190,8 @@ function updatePanelToggleButtons() {
   const calendarBtn = $('toggle-calendar-btn');
   const sidebarToolbarBtn = $('toggle-sidebar-toolbar-btn');
   const calendarToolbarBtn = $('toggle-calendar-toolbar-btn');
+  const mobileDocBtn = $('mobile-doc-btn');
+  const mobileCalendarBtn = $('mobile-calendar-btn');
   const isMobileMini = window.innerWidth <= MOBILE_MINI_BREAKPOINT;
   const isCompact = window.innerWidth <= 1100;
   const showSidebar = isMobileMini ? mobileMiniSidebarOpen : !!layoutPrefs.showSidebar;
@@ -3230,6 +3232,16 @@ function updatePanelToggleButtons() {
       calendarToolbarBtn.title = showCalendar ? '오른쪽 달력 패널 숨기기' : '오른쪽 달력 패널 보이기';
     }
   }
+  if (mobileDocBtn) {
+    mobileDocBtn.textContent = showSidebar ? '문서 닫기' : '문서';
+    mobileDocBtn.setAttribute('aria-label', showSidebar ? '문서 목록 닫기' : '문서 목록 열기');
+    mobileDocBtn.classList.toggle('active', showSidebar);
+  }
+  if (mobileCalendarBtn) {
+    mobileCalendarBtn.textContent = showCalendar ? '기록 닫기' : '기록';
+    mobileCalendarBtn.setAttribute('aria-label', showCalendar ? '기록 패널 닫기' : '기록 패널 열기');
+    mobileCalendarBtn.classList.toggle('active', showCalendar);
+  }
 }
 
 function applyAppLayout() {
@@ -3240,6 +3252,7 @@ function applyAppLayout() {
   const statsPanel = document.querySelector('.stats-panel');
   const showTreeBar = $('show-tree-bar');
   const showCalendarBar = $('show-calendar-bar');
+  const mobileActionBar = $('mobile-action-bar');
   if (!app || !sidebar || !sidebarResizer || !calendarResizer || !statsPanel) return;
 
   const isCompact = window.innerWidth <= 1100;
@@ -3256,13 +3269,17 @@ function applyAppLayout() {
   calendarResizer.classList.toggle('hidden-panel', !showCalendar);
   statsPanel.classList.toggle('hidden-panel', !showCalendar);
   if (showTreeBar) {
-    showTreeBar.classList.toggle('hidden', showSidebar);
+    if (isMobileMini) showTreeBar.classList.add('hidden');
+    else showTreeBar.classList.toggle('hidden', showSidebar);
     showTreeBar.setAttribute('aria-label', isMobileMini ? '문서 목록 열기' : '문서 목록 보이기');
     showTreeBar.title = isMobileMini ? '문서 목록 열기' : '문서 목록 보이기';
   }
   if (showCalendarBar) {
-    if (isMobileMini) showCalendarBar.classList.toggle('hidden', showCalendar);
+    if (isMobileMini) showCalendarBar.classList.add('hidden');
     else showCalendarBar.classList.toggle('hidden', showCalendar || isCompact);
+  }
+  if (mobileActionBar) {
+    mobileActionBar.classList.toggle('hidden', !isMobileMini);
   }
 
   if (showSidebar && showCalendar) app.style.gridTemplateColumns = `${sidebarWidth}px 8px 1fr 8px ${calendarWidth}px`;

@@ -74,6 +74,19 @@
     const splitHorizontalBtn = $('split-horizontal-btn');
     const exportTxtBtn = $('export-txt-btn');
     const exportPdfBtn = $('export-pdf-btn');
+    const mobileDocBtn = $('mobile-doc-btn');
+    const mobileCalendarBtn = $('mobile-calendar-btn');
+    const mobileSyncBtn = $('mobile-sync-btn');
+    const mobileCommandBtn = $('mobile-command-btn');
+    const mobileMoreBtn = $('mobile-more-btn');
+    const mobileMoreDialog = $('mobile-more-dialog');
+    const mobileMoreCloseBtn = $('mobile-more-close-btn');
+    const mobileMoreHistoryBtn = $('mobile-more-history-btn');
+    const mobileMoreSplitSingleBtn = $('mobile-more-split-single-btn');
+    const mobileMoreSplitVerticalBtn = $('mobile-more-split-vertical-btn');
+    const mobileMoreSplitHorizontalBtn = $('mobile-more-split-horizontal-btn');
+    const mobileMoreExportTxtBtn = $('mobile-more-export-txt-btn');
+    const mobileMoreExportPdfBtn = $('mobile-more-export-pdf-btn');
     const editorA = $('editor-a');
     const editorB = $('editor-b');
     const goalInput = $('goal-input');
@@ -148,7 +161,7 @@
       saveLayoutPrefs();
       applyAppLayout();
     };
-    if (sidebarToolbarBtn) sidebarToolbarBtn.onclick = () => {
+    function toggleSidebarPanel() {
       if (window.innerWidth <= MOBILE_MINI_BREAKPOINT) {
         const mobile = getMobileMiniState();
         const nextSidebar = !mobile.sidebarOpen;
@@ -159,8 +172,9 @@
       layoutPrefs.showSidebar = !layoutPrefs.showSidebar;
       saveLayoutPrefs();
       applyAppLayout();
-    };
-    if (calendarToolbarBtn) calendarToolbarBtn.onclick = () => {
+    }
+
+    function toggleCalendarPanel() {
       if (window.innerWidth <= MOBILE_MINI_BREAKPOINT) {
         const mobile = getMobileMiniState();
         const nextCalendar = !mobile.calendarOpen;
@@ -172,7 +186,9 @@
       layoutPrefs.showCalendar = !layoutPrefs.showCalendar;
       saveLayoutPrefs();
       applyAppLayout();
-    };
+    }
+    if (sidebarToolbarBtn) sidebarToolbarBtn.onclick = toggleSidebarPanel;
+    if (calendarToolbarBtn) calendarToolbarBtn.onclick = toggleCalendarPanel;
 
     if (editorA) editorA.addEventListener('focus', () => setActivePane('a'));
     if (editorB) editorB.addEventListener('focus', () => setActivePane('b'));
@@ -223,6 +239,43 @@
     if (exportTxtBtn) exportTxtBtn.onclick = exportTxt;
     if (exportPdfBtn) exportPdfBtn.onclick = () => {
       void exportPdf();
+    };
+    if (mobileDocBtn) mobileDocBtn.onclick = toggleSidebarPanel;
+    if (mobileCalendarBtn) mobileCalendarBtn.onclick = toggleCalendarPanel;
+    if (mobileSyncBtn) mobileSyncBtn.onclick = () => {
+      void handleManualSync();
+    };
+    if (mobileCommandBtn) mobileCommandBtn.onclick = openCommandPalette;
+    if (mobileMoreBtn) mobileMoreBtn.onclick = () => {
+      if (!mobileMoreDialog || typeof mobileMoreDialog.showModal !== 'function') return;
+      mobileMoreDialog.showModal();
+    };
+    if (mobileMoreCloseBtn) mobileMoreCloseBtn.onclick = () => {
+      if (mobileMoreDialog && typeof mobileMoreDialog.close === 'function') mobileMoreDialog.close();
+    };
+    if (mobileMoreHistoryBtn) mobileMoreHistoryBtn.onclick = () => {
+      openHistoryDialog();
+      if (mobileMoreDialog && typeof mobileMoreDialog.close === 'function') mobileMoreDialog.close();
+    };
+    if (mobileMoreSplitSingleBtn) mobileMoreSplitSingleBtn.onclick = () => {
+      switchSplit('single');
+      if (mobileMoreDialog && typeof mobileMoreDialog.close === 'function') mobileMoreDialog.close();
+    };
+    if (mobileMoreSplitVerticalBtn) mobileMoreSplitVerticalBtn.onclick = () => {
+      switchSplit('vertical');
+      if (mobileMoreDialog && typeof mobileMoreDialog.close === 'function') mobileMoreDialog.close();
+    };
+    if (mobileMoreSplitHorizontalBtn) mobileMoreSplitHorizontalBtn.onclick = () => {
+      switchSplit('horizontal');
+      if (mobileMoreDialog && typeof mobileMoreDialog.close === 'function') mobileMoreDialog.close();
+    };
+    if (mobileMoreExportTxtBtn) mobileMoreExportTxtBtn.onclick = () => {
+      exportTxt();
+      if (mobileMoreDialog && typeof mobileMoreDialog.close === 'function') mobileMoreDialog.close();
+    };
+    if (mobileMoreExportPdfBtn) mobileMoreExportPdfBtn.onclick = () => {
+      void exportPdf();
+      if (mobileMoreDialog && typeof mobileMoreDialog.close === 'function') mobileMoreDialog.close();
     };
 
     if (timerToggleBtn) timerToggleBtn.onclick = () => {
@@ -322,6 +375,15 @@
       });
     }
     if (commandPaletteCloseBtn) commandPaletteCloseBtn.onclick = closeCommandPalette;
+    if (mobileMoreDialog) {
+      mobileMoreDialog.addEventListener('cancel', (e) => {
+        e.preventDefault();
+        if (typeof mobileMoreDialog.close === 'function') mobileMoreDialog.close();
+      });
+      mobileMoreDialog.addEventListener('click', (e) => {
+        if (e.target === mobileMoreDialog && typeof mobileMoreDialog.close === 'function') mobileMoreDialog.close();
+      });
+    }
 
     document.addEventListener('click', (e) => {
       if (window.innerWidth > MOBILE_MINI_BREAKPOINT) return;
@@ -331,12 +393,15 @@
       const showCalendarBarBtn = $('show-calendar-bar');
       const sidebarToolbar = $('toggle-sidebar-toolbar-btn');
       const calendarToolbar = $('toggle-calendar-toolbar-btn');
+      const mobileBar = $('mobile-action-bar');
       if (sidebar && sidebar.contains(e.target)) return;
       if (statsPanel && statsPanel.contains(e.target)) return;
       if (showTreeBarBtn && showTreeBarBtn.contains(e.target)) return;
       if (showCalendarBarBtn && showCalendarBarBtn.contains(e.target)) return;
       if (sidebarToolbar && sidebarToolbar.contains(e.target)) return;
       if (calendarToolbar && calendarToolbar.contains(e.target)) return;
+      if (mobileBar && mobileBar.contains(e.target)) return;
+      if (mobileMoreDialog && mobileMoreDialog.open) return;
       const mobile = getMobileMiniState();
       if (!mobile.sidebarOpen && !mobile.calendarOpen) return;
       setMobileMiniState({ sidebarOpen: false, calendarOpen: false });

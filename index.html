@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://unpkg.com; connect-src 'self' https://*.supabase.co; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'" />
   <title>WritingEditor Prototype</title>
-  <link rel="stylesheet" href="styles.css?v=15" />
+  <link rel="stylesheet" href="styles.css?v=16" />
 </head>
 <body>
   <div id="auth-gate" class="auth-gate">
@@ -30,17 +30,21 @@
   <div id="app" class="app">
     <aside id="sidebar" class="sidebar">
       <button id="command-palette-btn" class="sidebar-command-btn" type="button" title="명령 팔레트 (Ctrl/Cmd+K)">명령 팔레트</button>
-      <div class="sidebar-menu">
-        <span id="user-email" class="pill"></span>
-        <button id="upgrade-account-btn" class="hidden">회원가입</button>
-        <button id="logout-btn">로그아웃</button>
-        <span id="sync-status" class="pill">로그인 필요</span>
-      </div>
       <div class="sidebar-header">
         <h1>문서 목록</h1>
         <button id="toggle-tree-btn" class="panel-icon-btn" type="button" title="문서 목록 숨기기" aria-label="문서 목록 숨기기">◀</button>
       </div>
       <div id="tree" class="tree"></div>
+      <div class="sidebar-footer">
+        <div id="user-info" class="user-info">
+          <span id="user-email" class="pill"></span>
+          <span id="sync-status" class="pill" data-status="pending">로그인 필요</span>
+        </div>
+        <div class="sidebar-actions">
+          <button id="upgrade-account-btn" class="hidden">회원가입</button>
+          <button id="logout-btn">로그아웃</button>
+        </div>
+      </div>
     </aside>
     <div id="sidebar-resizer" class="sidebar-resizer" aria-hidden="true"></div>
 
@@ -52,11 +56,13 @@
           <button id="top-command-btn" type="button">명령 팔레트</button>
         </div>
         <div class="right-tools">
-          <button id="manual-sync-btn" type="button">지금 동기화</button>
+          <button id="manual-sync-btn" type="button" title="지금 동기화">동기화</button>
           <button id="history-open-btn" type="button">히스토리</button>
-          <button id="split-single-btn" type="button">단일</button>
-          <button id="split-vertical-btn" type="button">좌우</button>
-          <button id="split-horizontal-btn" type="button">상하</button>
+          <div class="pill-group" style="display: flex; gap: 2px; background: var(--fx-bg-soft); padding: 2px; border-radius: var(--fx-radius-sm);">
+            <button id="split-single-btn" type="button" style="border:none; background:transparent; padding: 4px 8px;" title="단일 창">▯</button>
+            <button id="split-vertical-btn" type="button" style="border:none; background:transparent; padding: 4px 8px;" title="좌우 분할">▯|▯</button>
+            <button id="split-horizontal-btn" type="button" style="border:none; background:transparent; padding: 4px 8px;" title="상하 분할">▤</button>
+          </div>
           <button id="export-txt-btn" type="button">TXT</button>
           <button id="export-pdf-btn" type="button">PDF</button>
         </div>
@@ -134,6 +140,28 @@
 
   <button id="show-tree-bar" class="edge-bar left hidden" type="button" title="문서 목록 보이기" aria-label="문서 목록 보이기"></button>
   <button id="show-calendar-bar" class="edge-bar right hidden" type="button" title="달력 보이기" aria-label="달력 보이기"></button>
+  <nav id="mobile-action-bar" class="mobile-action-bar hidden" aria-label="모바일 빠른 동작">
+    <button id="mobile-doc-btn" type="button" aria-label="문서 목록 열기">문서</button>
+    <button id="mobile-calendar-btn" type="button" aria-label="기록 패널 열기">기록</button>
+    <button id="mobile-sync-btn" type="button" aria-label="지금 동기화">동기화</button>
+    <button id="mobile-command-btn" type="button" aria-label="명령 팔레트 열기">명령</button>
+    <button id="mobile-more-btn" type="button" aria-label="추가 작업 열기">더보기</button>
+  </nav>
+
+  <dialog id="mobile-more-dialog" class="mobile-more-dialog">
+    <h3>추가 작업</h3>
+    <div class="mobile-more-grid">
+      <button id="mobile-more-history-btn" type="button">히스토리</button>
+      <button id="mobile-more-split-single-btn" type="button">단일 레이아웃</button>
+      <button id="mobile-more-split-vertical-btn" type="button">좌우 분할</button>
+      <button id="mobile-more-split-horizontal-btn" type="button">상하 분할</button>
+      <button id="mobile-more-export-txt-btn" type="button">TXT 내보내기</button>
+      <button id="mobile-more-export-pdf-btn" type="button">PDF 내보내기</button>
+    </div>
+    <div class="danger-actions">
+      <button id="mobile-more-close-btn" type="button">닫기</button>
+    </div>
+  </dialog>
 
   <dialog id="history-dialog">
     <h3>저장 히스토리 (최대 10개)</h3>
@@ -248,11 +276,10 @@
   <script src="history-service.js?v=1"></script>
   <script src="timer-service.js?v=1"></script>
   <script src="session-flow-service.js?v=1"></script>
-  <script src="app.js?v=92"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
+  <script src="app.js?v=93"></script>
 </body>
 </html>
-
-
 
 
 
