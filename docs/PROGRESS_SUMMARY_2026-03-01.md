@@ -340,6 +340,19 @@
   - 원인: 브라우저 캐시로 구버전 `ui-bindings.js`가 유지되면 테마 토글 핸들러가 연결되지 않을 수 있음
   - 조치: 스크립트 캐시 무효화로 신규 바인딩 강제 적용
 
+### 2.17 기록 패널 클릭 불가 핫픽스
+
+- 증상
+  - 기록 패널은 열리지만(시각적으로 표시됨) 내부 조작이 불가능
+- 원인
+  - `.app`의 `z-index`가 stacking context를 만들어 `#panel-backdrop`가 패널 인터랙션을 선점
+- 수정
+  - `styles/layout.css`: `.app`의 `z-index` 제거
+  - `index.html`: `styles.css?v=20`으로 갱신해 캐시 무효화
+- 검증
+  - `ui-bindings` 테스트 통과
+  - `security-preflight-check` 통과
+
 ## 3. 테스트 결과
 
 실행 항목:

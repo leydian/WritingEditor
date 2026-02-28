@@ -1,7 +1,6 @@
 .app {
   position: relative;
   height: 100vh;
-  z-index: var(--fx-layer-main);
 }
 
 .main {
