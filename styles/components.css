@@ -298,13 +298,24 @@ button:disabled {
   padding-top: 32px; /* space for close btn */
 }
 
+/* 1-A: toggle-calendar-btn duplicates panel-close-btn — hide it */
+#toggle-calendar-btn {
+  display: none;
+}
+
 .stats-panel-header {
-  padding-right: 36px; /* space for close btn */
+  padding-top: 4px;
+  border-top: 1px solid var(--fx-border);
+  margin-top: 4px;
 }
 
 .stats-panel-header h2 {
-  font-size: 1.1rem;
-  margin-bottom: 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fx-ink-soft);
+  margin-bottom: 14px;
 }
 
 .timer-box {
@@ -323,18 +334,29 @@ button:disabled {
   align-items: center;
 }
 
+/* 1-B: vertical stack — label above, number centered */
 .timer-status-line {
   display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 8px;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 0;
+}
+
+#timer-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fx-ink-soft);
 }
 
 #timer-display {
-  font-size: 2.4rem;
+  font-size: 2.8rem;
   font-weight: 700;
   font-family: monospace;
   color: var(--fx-accent);
+  line-height: 1;
 }
 
 .timer-display {
@@ -345,6 +367,48 @@ button:disabled {
   color: var(--fx-accent);
 }
 
+/* 1-C: timer config row */
+.timer-config {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.timer-config label {
+  font-size: 0.8rem;
+  color: var(--fx-ink-soft);
+  white-space: nowrap;
+}
+
+.timer-config input[type="number"] {
+  width: 52px;
+  text-align: center;
+  padding: 4px 6px;
+  font-size: 0.875rem;
+}
+
+.timer-config input[type="number"]::-webkit-outer-spin-button,
+.timer-config input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+#pomodoro-apply {
+  margin-left: auto;
+}
+
+/* 1-D: start / skip buttons side by side */
+.timer-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.timer-actions button {
+  flex: 1;
+}
+
+/* 1-E: daily stats box */
 .daily-box {
   background: var(--fx-surface);
   border: 1px solid var(--fx-border);
@@ -355,21 +419,48 @@ button:disabled {
   gap: 8px;
 }
 
-#daily-stats {
+.daily-box strong {
   font-size: 0.85rem;
   color: var(--fx-ink-soft);
+  font-weight: 600;
+}
+
+#daily-stats {
+  font-size: 0.82rem;
+  color: var(--fx-ink);
+  line-height: 1.8;
   white-space: pre-line;
 }
 
+/* 1-G: goal input + checkbox in one row via grid */
 .calendar-tools {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr auto;
   gap: 8px;
+  align-items: center;
   margin-bottom: 16px;
 }
 
-.calendar-tools input {
-  width: 100%;
+#goal-input {
+  grid-column: 1;
+}
+
+.goal-metric-check {
+  grid-column: 2;
+  font-size: 0.82rem;
+  color: var(--fx-ink-soft);
+  white-space: nowrap;
+  gap: 4px;
+  display: flex;
+  align-items: center;
+}
+
+#goal-lock-btn {
+  grid-column: 1 / -1;
+}
+
+#progress-pill {
+  grid-column: 1 / -1;
 }
 
 .calendar-view-toggle {
