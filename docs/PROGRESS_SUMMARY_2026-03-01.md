@@ -2,7 +2,7 @@
 
 기준 저장소: `https://github.com/leydian/WritingEditor`  
 기준 브랜치: `main`  
-반영 범위: 대화상자 UX 표준화 + 동기화 충돌 UX 개선 + 인증 메시지 표준화 + 조립층 분해 1차
+반영 범위: 대화상자 UX 표준화 + 동기화 충돌 UX 개선 + 인증 메시지 표준화 + 조립층 분해 1/2차
 
 ## 1. 이번 작업 목표
 
@@ -67,6 +67,17 @@
   - `app.js` 책임 축소(대화상자 상태 머신 제거)
   - 대화상자 관련 회귀는 독립 테스트로 검증 가능해짐
 
+### 2.6 조립층 분해 2차 (`tree-service` 모듈 분리)
+
+- 신규 모듈 `tree-service.js` 추가
+  - `createTreeActions(deps)` 팩토리 제공
+  - API: `getFolder`, `getDescendantFolderIds`, `renameDoc`, `renameFolder`, `createDoc`, `createFolder`, `deleteDoc`, `deleteFolder`, `moveDocToFolder`, `moveFolderToFolder`
+- `app.js`에서 트리 조작 구현을 서비스 위임 방식으로 전환
+- `index.html` 스크립트 로드 순서에 `tree-service.js` 추가
+- 결과:
+  - 문서/폴더 도메인 로직이 조립층에서 분리됨
+  - 트리 도메인 회귀를 독립 테스트로 검증 가능해짐
+
 ## 3. 테스트 결과
 
 실행 항목:
@@ -80,6 +91,7 @@ node .\tests\auth-config-service.test.js
 node .\tests\sync-utils.test.js
 node .\tests\ui-bindings.test.js
 node .\tests\dialog-service.test.js
+node .\tests\tree-service.test.js
 node .\scripts\security-preflight-check.js
 ```
 
@@ -92,12 +104,14 @@ node .\scripts\security-preflight-check.js
 
 - 수정
   - `dialog-service.js`
+  - `tree-service.js`
   - `app.js`
   - `auth-service.js`
   - `index.html`
   - `styles.css`
   - `tests/auth-service.test.js`
   - `tests/dialog-service.test.js`
+  - `tests/tree-service.test.js`
 - 문서 갱신
   - `README.md`
   - `docs/PROJECT_UNIFIED.md`
@@ -108,7 +122,7 @@ node .\scripts\security-preflight-check.js
 1. 사용자 상호작용이 앱 내부 모달로 일관화되어 UX 톤이 정리됨
 2. 충돌 처리에서 “취소” 분기가 명시되어 오동작 가능성이 감소함
 3. 인증 메시지는 reason 코드 기반으로 통일되었지만, 서버 원문 에러와의 매핑 보강은 추가 여지 있음
-4. 대화상자 로직이 `dialog-service`로 분리되어 이후 `app.js` 2차 분해(트리/히스토리/타이머)의 선행 기반이 마련됨
+4. 대화상자 로직(`dialog-service`) + 트리 로직(`tree-service`)이 분리되어 `app.js` 2차 분해의 핵심 기반이 확보됨
 
 ## 6. 다음 권장 과제
 

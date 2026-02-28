@@ -53,6 +53,11 @@
 - `app.js`는 `DialogService.createDialogApi` 호출로 조립 역할만 수행
 - `tests/dialog-service.test.js`로 대화상자 계약 테스트 추가
 
+11. 조립층 분해 2차 (2026-03-01)
+- 문서/폴더 트리 도메인을 `tree-service.js`로 분리
+- `app.js`의 트리 관련 CRUD/이동 로직은 `TreeService.createTreeActions` 호출로 위임
+- `tests/tree-service.test.js`로 트리 동작 계약 테스트 추가(생성/삭제/이동 제한)
+
 8. 동기화 충돌 UX 개선 (2026-03-01)
 - 충돌 분기를 단순 `confirm`에서 명시적 3지선다로 전환
   - `로컬로 덮어쓰기`
@@ -168,6 +173,7 @@
 - 동기화 계산: `sync-utils.js`
 - UI 이벤트 바인딩: `ui-bindings.js`
 - 대화상자 서비스: `dialog-service.js`
+- 트리 조작 서비스: `tree-service.js`
 - 상태 정규화/히스토리/뽀모도로 계산: `state-utils.js`
 
 ---
@@ -209,6 +215,7 @@ node .\scripts\security-preflight-check.js
 - `tests/sync-utils.test.js`
 - `tests/ui-bindings.test.js`
 - `tests/dialog-service.test.js`
+- `tests/tree-service.test.js`
 
 검증 명령:
 
@@ -221,6 +228,7 @@ node .\tests\auth-config-service.test.js
 node .\tests\sync-utils.test.js
 node .\tests\ui-bindings.test.js
 node .\tests\dialog-service.test.js
+node .\tests\tree-service.test.js
 node .\scripts\security-preflight-check.js
 ```
 

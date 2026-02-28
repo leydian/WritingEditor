@@ -33,6 +33,7 @@ const authService = (typeof AuthService !== 'undefined' && AuthService) ? AuthSe
 const authConfigService = (typeof AuthConfigService !== 'undefined' && AuthConfigService) ? AuthConfigService : null;
 const uiBindings = (typeof UiBindings !== 'undefined' && UiBindings) ? UiBindings : null;
 const dialogService = (typeof DialogService !== 'undefined' && DialogService) ? DialogService : null;
+const treeService = (typeof TreeService !== 'undefined' && TreeService) ? TreeService : null;
 
 function seoulDateParts(date = new Date()) {
   const parts = new Intl.DateTimeFormat('en-CA', {
@@ -117,6 +118,24 @@ const dialogApi = (
   && typeof dialogService.createDialogApi === 'function'
 )
   ? dialogService.createDialogApi({ getById: $ })
+  : null;
+const treeActions = (
+  treeService
+  && typeof treeService.createTreeActions === 'function'
+)
+  ? treeService.createTreeActions({
+    state,
+    getDoc,
+    openInputDialog,
+    openConfirmDialog,
+    openNoticeDialog,
+    addHistoryEntry,
+    cloneStateForHistory,
+    saveState,
+    renderAll,
+    renderTree,
+    dirtyDocIds,
+  })
   : null;
 
 const state = loadState();
@@ -1460,10 +1479,16 @@ function renderTree() {
 }
 
 function getFolder(folderId) {
+  if (treeActions && typeof treeActions.getFolder === 'function') {
+    return treeActions.getFolder(folderId);
+  }
   return state.folders.find((f) => f.id === folderId);
 }
 
 function getDescendantFolderIds(folderId) {
+  if (treeActions && typeof treeActions.getDescendantFolderIds === 'function') {
+    return treeActions.getDescendantFolderIds(folderId);
+  }
   const result = [];
   const stack = [folderId];
   while (stack.length > 0) {
@@ -1478,38 +1503,24 @@ function getDescendantFolderIds(folderId) {
 }
 
 async function renameDoc(docId) {
-  const doc = getDoc(docId);
-  if (!doc) return;
-  const name = await openInputDialog({
-    title: '문서 이름 변경',
-    message: '새 문서 이름을 입력하세요.',
-    defaultValue: doc.name,
-    confirmText: '변경',
-    cancelText: '취소',
-  });
-  if (!name || !name.trim()) return;
-  doc.name = name.trim();
-  saveState();
-  renderAll();
+  if (treeActions && typeof treeActions.renameDoc === 'function') {
+    return treeActions.renameDoc(docId);
+  }
+  return undefined;
 }
 
 async function renameFolder(folderId) {
-  const folder = getFolder(folderId);
-  if (!folder) return;
-  const name = await openInputDialog({
-    title: '폴더 이름 변경',
-    message: '새 폴더 이름을 입력하세요.',
-    defaultValue: folder.name,
-    confirmText: '변경',
-    cancelText: '취소',
-  });
-  if (!name || !name.trim()) return;
-  folder.name = name.trim();
-  saveState();
-  renderTree();
+  if (treeActions && typeof treeActions.renameFolder === 'function') {
+    return treeActions.renameFolder(folderId);
+  }
+  return undefined;
 }
 
 function ensureAtLeastOneDoc() {
+  if (treeActions && typeof treeActions.ensureAtLeastOneDoc === 'function') {
+    treeActions.ensureAtLeastOneDoc();
+    return;
+  }
   if (state.docs.length > 0) return;
   if (state.folders.length > 0) {
     state.activeDocA = null;
@@ -1523,136 +1534,44 @@ function ensureAtLeastOneDoc() {
 }
 
 async function deleteDoc(docId) {
-  const doc = getDoc(docId);
-  if (!doc) return;
-  const shouldDelete = await openConfirmDialog({
-    title: '문서 삭제 확인',
-    message: `문서 "${doc.name}"를 삭제할까요?`,
-    confirmText: '삭제',
-    cancelText: '취소',
-    danger: true,
-  });
-  if (!shouldDelete) return;
-  addHistoryEntry('doc-delete', {
-    scope: 'doc',
-    docId: doc.id,
-    docName: doc.name,
-    summary: `문서 삭제: ${doc.name}`,
-  }, cloneStateForHistory());
-
-  state.docs = state.docs.filter((d) => d.id !== docId);
-  dirtyDocIds.delete(docId);
-
-  if (state.activeDocA === docId) state.activeDocA = null;
-  if (state.activeDocB === docId) state.activeDocB = null;
-  ensureAtLeastOneDoc();
-  if (!state.activeDocA && state.docs[0]) state.activeDocA = state.docs[0].id;
-  if (state.activeDocA === state.activeDocB) state.activeDocB = null;
-
-  saveState();
-  renderAll();
+  if (treeActions && typeof treeActions.deleteDoc === 'function') {
+    return treeActions.deleteDoc(docId);
+  }
+  return undefined;
 }
 
 async function deleteFolder(folderId) {
-  const folder = getFolder(folderId);
-  if (!folder) return;
-  const folderIds = [folderId, ...getDescendantFolderIds(folderId)];
-  const docsInFolders = state.docs.filter((d) => folderIds.includes(d.folderId));
-  const msg = `폴더 "${folder.name}" 및 하위 폴더/문서 ${docsInFolders.length}개를 삭제할까요?`;
-  const shouldDelete = await openConfirmDialog({
-    title: '폴더 삭제 확인',
-    message: msg,
-    confirmText: '삭제',
-    cancelText: '취소',
-    danger: true,
-  });
-  if (!shouldDelete) return;
-  addHistoryEntry('folder-delete', {
-    scope: 'folder',
-    summary: `폴더 삭제: ${folder.name} (문서 ${docsInFolders.length}개 포함)`,
-  }, cloneStateForHistory());
-
-  state.folders = state.folders.filter((f) => !folderIds.includes(f.id));
-  state.docs = state.docs.filter((d) => !folderIds.includes(d.folderId));
-  docsInFolders.forEach((d) => {
-    dirtyDocIds.delete(d.id);
-  });
-
-  if (state.activeDocA && !getDoc(state.activeDocA)) state.activeDocA = null;
-  if (state.activeDocB && !getDoc(state.activeDocB)) state.activeDocB = null;
-  ensureAtLeastOneDoc();
-  if (!state.activeDocA && state.docs[0]) state.activeDocA = state.docs[0].id;
-  if (state.activeDocA === state.activeDocB) state.activeDocB = null;
-
-  saveState();
-  renderAll();
+  if (treeActions && typeof treeActions.deleteFolder === 'function') {
+    return treeActions.deleteFolder(folderId);
+  }
+  return undefined;
 }
 
 function moveDocToFolder(docId, folderId) {
-  const doc = getDoc(docId);
-  if (!doc) return;
-  if (doc.folderId === folderId) return;
-  doc.folderId = folderId;
-  saveState();
-  renderTree();
+  if (treeActions && typeof treeActions.moveDocToFolder === 'function') {
+    treeActions.moveDocToFolder(docId, folderId);
+  }
 }
 
 async function moveFolderToFolder(folderId, targetParentId) {
-  const folder = getFolder(folderId);
-  if (!folder) return;
-  if (folderId === targetParentId) return;
-  if (targetParentId && getDescendantFolderIds(folderId).includes(targetParentId)) {
-    await openNoticeDialog({
-      title: '이동 불가',
-      message: '하위 폴더 안으로는 이동할 수 없습니다.',
-    });
-    return;
+  if (treeActions && typeof treeActions.moveFolderToFolder === 'function') {
+    return treeActions.moveFolderToFolder(folderId, targetParentId);
   }
-  folder.parentFolderId = targetParentId;
-  saveState();
-  renderTree();
+  return undefined;
 }
 
 async function createDoc(folderId) {
-  const name = await openInputDialog({
-    title: '문서 생성',
-    message: '새 문서 이름을 입력하세요.',
-    defaultValue: '새 문서.txt',
-    confirmText: '생성',
-    cancelText: '취소',
-  });
-  if (!name || !name.trim()) return;
-  const id = `d${Date.now()}`;
-  const nextName = name.trim();
-  state.docs.push({ id, name: nextName, folderId, content: '' });
-  state.activeDocA = id;
-  addHistoryEntry('doc-create', {
-    scope: 'doc',
-    docId: id,
-    docName: nextName,
-    summary: `문서 생성: ${nextName}`,
-  });
-  saveState();
-  renderAll();
+  if (treeActions && typeof treeActions.createDoc === 'function') {
+    return treeActions.createDoc(folderId);
+  }
+  return undefined;
 }
 
 async function createFolder(parentFolderId = null) {
-  const name = await openInputDialog({
-    title: '폴더 생성',
-    message: '새 폴더 이름을 입력하세요.',
-    defaultValue: '새 폴더',
-    confirmText: '생성',
-    cancelText: '취소',
-  });
-  if (!name || !name.trim()) return;
-  const nextName = name.trim();
-  state.folders.push({ id: `f${Date.now()}`, name: nextName, parentFolderId });
-  addHistoryEntry('folder-create', {
-    scope: 'folder',
-    summary: `폴더 생성: ${nextName}`,
-  });
-  saveState();
-  renderTree();
+  if (treeActions && typeof treeActions.createFolder === 'function') {
+    return treeActions.createFolder(parentFolderId);
+  }
+  return undefined;
 }
 
 function cloneStateForHistory() {

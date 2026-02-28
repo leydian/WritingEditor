@@ -15,6 +15,7 @@
 - `sync-utils.js`: 동기화 계산/충돌 판정 유틸
 - `ui-bindings.js`: UI 이벤트 바인딩 모듈
 - `dialog-service.js`: 공통 대화상자(확인/입력/알림/선택) 서비스 모듈
+- `tree-service.js`: 문서/폴더 트리 조작(생성/이동/삭제/이름변경) 서비스 모듈
 - `tests/`: 유닛 테스트
 - `scripts/`: 점검/자동화 스크립트
 - `docs/PROJECT_UNIFIED.md`: 단일 기준 운영 문서
@@ -41,6 +42,7 @@ node .\tests\auth-config-service.test.js
 node .\tests\sync-utils.test.js
 node .\tests\ui-bindings.test.js
 node .\tests\dialog-service.test.js
+node .\tests\tree-service.test.js
 node .\scripts\security-preflight-check.js
 ```
 
